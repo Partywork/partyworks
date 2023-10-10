@@ -330,12 +330,4 @@ export abstract class PartyWorks<
 
   //todo maybe adding a global middleware kinda setup for custom events
   globalMiddlewares() {}
-
-  //ok how should error event look like
-  //event: "error", for: "eventName" , reason: User's imlplementation, could be an object or string, or undefined
-  //this makes error handling difficult for emitAwait events
-  //but this makes error handling simple for globalized events, just a simple useError("eventName")
-  //maybe then we can for emitAwait events just listen for both  error & event props?
-  //wait if useError is gonna be the prop and for eventName, we can easily listen for events with error property that makes sense!
-  sendErrorEvent() {}
 }
