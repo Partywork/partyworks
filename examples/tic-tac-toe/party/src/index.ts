@@ -92,7 +92,7 @@ export default class Funrooms extends PartyWorks<
     this.customEvents({
       [ClientEvents.CREATE_GAME]: {
         validator(data) {
-          if (data === "tic-tac-toe") {
+          if (data !== "tic-tac-toe") {
             throw new BadRequestError("what this is not a known game bruh!");
           }
         },
