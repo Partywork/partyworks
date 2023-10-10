@@ -9,7 +9,9 @@
   ],
   "prebuild": "del-cli ./build/*",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "watch": "tsc -w",
+    "playground": "partykit dev"
   },
   "keywords": [
     "partyworks",

@@ -7,6 +7,9 @@ export interface Player<TState = any, TEvents extends Record<string, any> = {}>
   sendData: <K extends keyof TEvents>(event: K, data: TEvents[K]) => void;
 }
 
+//lol for anyone wondering why the internaltypes are 0,1,2,4 and then 100,300 , i copied this from my funrooms project
+// and that had alot more different events so ><
+
 export enum InternalEvents {
   //* Connection
   CONNECT = 0, //SERVER ONLY

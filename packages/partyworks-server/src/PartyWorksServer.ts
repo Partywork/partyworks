@@ -48,24 +48,16 @@ export abstract class PartyWorks<
       data: TBroadcasts[K]
     ) => void;
   };
+  //todo :/ not really needed, well maybe for type safety, huh, dunno, since partykit has added getState | setState to the connection
   players: Player<TState, TEventEmitters>[] = [];
 
-  //this is for sending custom
-  customDataOnConnect(player: Player<TState, TEventEmitters>): void {}
-
-  //maybe this is gonna be the custom state on connect
-  customRoomState(player: Player<TState, TEventEmitters>): any {}
-
-  //send the event that you want to send on connect here
-  sendEventOnConnect(player: Player<TState, TEventEmitters>) {}
-
-  roomState(): any | Promise<any> {}
   private _customEvents: CustomEvents<TEventsListener, TState> =
     {} as CustomEvents<TEventsListener, TState>;
 
   constructor(readonly party: Party.Party) {
     this.partyworks = party as any;
 
+    //todo remove this, i personally don't like this api, kinda hacky, this.broadcast works fine
     this.partyworks.broadcastData = (event, data) => {
       try {
         const stringifiedData = JSON.stringify({ event, data });
@@ -75,96 +67,16 @@ export abstract class PartyWorks<
         console.log(`error broadcasting data`);
       }
     };
+
+    //setup custom events and other things, that you want to run in constrcutor
     this.setCustomEvent();
     this.setup();
   }
 
-  //so this should have some basic properties, but can be easily ovverriden
-  onConnect(
-    connection: Party.Connection,
-    ctx: Party.ConnectionContext
-  ): void | Promise<void> {
-    this.handleConnect(connection as Player, ctx);
-  }
-
-  onMessage(
-    message: string | ArrayBuffer,
-    sender: Party.Connection
-  ): void | Promise<void> {}
-
-  onClose(connection: Party.Connection): void | Promise<void> {
-    this.handleClose(connection);
-  }
-
-  onError(connection: Party.Connection, error: Error): void | Promise<void> {
-    this.handleError(connection);
-  }
-
-  async handleConnect(
-    connection: Player<TState, TEventEmitters>,
-    ctx: Party.ConnectionContext
-  ) {
-    this.customDataOnConnect(connection);
-    connection.addEventListener("message", (e) => {
-      this.handleEvents(e, connection);
-    });
-
-    this.players.push(connection);
-
-    const roomData = this.roomState();
-
-    connection.sendData = <K extends keyof TEventEmitters>(
-      event: K,
-      data: TEventEmitters[K]
-    ) => {
-      try {
-        const stringifiedData = JSON.stringify({ event, data });
-
-        connection.send(stringifiedData);
-      } catch (error) {
-        console.log(`error sending data`);
-      }
-    };
-
-    //send internal connect message & roomState
-    // connection.send(JSON.stringify(MessageBuilder.connect(connection, data)));
-    connection.send(
-      JSON.stringify(
-        MessageBuilder.roomState({
-          //@ts-ignore , we will sync the info property if defined
-          info: connection.state?.info! as any,
-          self: connection,
-          users: this.players,
-          roomData,
-        })
-      )
-    );
-
-    //notify everyone that the user has connected
-    this.party.broadcast(
-      JSON.stringify(MessageBuilder.userOnline(connection)),
-      [connection.id]
-    );
-
-    this.sendEventOnConnect(connection);
-  }
-
-  handleDisconnect(connection: Party.Connection) {
-    this.players = this.players.filter((con) => con.id !== connection.id);
-
-    this.party.broadcast(
-      JSON.stringify(MessageBuilder.userOffline(connection))
-    );
-  }
-
-  handleClose(connection: Party.Connection) {
-    this.handleDisconnect(connection);
-  }
-  handleError(connection: Party.Connection) {
-    this.handleDisconnect(connection);
-  }
-
-  handleEvents(e: MessageEvent, conn: Player) {
+  //*-----------------------------------
+  //* Private Internal Methods, internal lib methods
+  //*-----------------------------------
+  private handleEvents(e: MessageEvent, conn: Player) {
     try {
       const parsedData = JSON.parse(e.data as string);
 
@@ -238,34 +150,77 @@ export abstract class PartyWorks<
     } catch (error) {}
   }
 
-  setup() {}
-  setCustomEvent() {}
+  //*-----------------------------------
+  //* Userfacing Internal Methods, not to be overriden, sadly typescript does not have final keyword so we can't enforce em yet
+  //*-----------------------------------
 
-  //todo by default this is gonna be called
-  //todo this can/should be easily overridden by the user
-  catchAll(
-    error: any,
-    {}: { data: any; rid: any; event: any }, //todo this can be any, in case of unknown events maybe we throw 404 instead :/
-    player: Party.Connection
-  ) {}
+  async handleConnect(
+    connection: Player<TState, TEventEmitters>,
+    ctx: Party.ConnectionContext
+  ) {
+    this.customDataOnConnect(connection);
+    connection.addEventListener("message", (e) => {
+      this.handleEvents(e, connection);
+    });
 
-  //this handle notfound events, this should be overridden by the user, default is noop
-  notFound(parsedData: any, player: Party.Connection) {}
+    this.players.push(connection);
 
-  globalMiddlewares() {}
+    const roomData = this.roomState();
 
-  //ok how should error event look like
-  //event: "error", for: "eventName" , reason: User's imlplementation, could be an object or string, or undefined
-  //this makes error handling difficult for emitAwait events
-  //but this makes error handling simple for globalized events, just a simple useError("eventName")
-  //maybe then we can for emitAwait events just listen for both  error & event props?
-  //wait if useError is gonna be the prop and for eventName, we can easily listen for events with error property that makes sense!
-  sendErrorEvent() {}
+    //todo remove this, this api gives sendData to player/cconnection itself, i feel this.send is a much better and cleaner api
+    connection.sendData = <K extends keyof TEventEmitters>(
+      event: K,
+      data: TEventEmitters[K]
+    ) => {
+      try {
+        const stringifiedData = JSON.stringify({ event, data });
 
-  customEvents(data: CustomEvents<TEventsListener, TState>) {
-    this._customEvents = data;
+        connection.send(stringifiedData);
+      } catch (error) {
+        console.log(`error sending data`);
+      }
+    };
+
+    //send internal connect message & roomState
+    // connection.send(JSON.stringify(MessageBuilder.connect(connection, data)));
+    connection.send(
+      JSON.stringify(
+        MessageBuilder.roomState({
+          //@ts-ignore , we will sync the info property if defined
+          info: connection.state?.info! as any,
+          self: connection,
+          users: this.players,
+          roomData,
+        })
+      )
+    );
+
+    //notify everyone that the user has connected
+    this.party.broadcast(
+      JSON.stringify(MessageBuilder.userOnline(connection)),
+      [connection.id]
+    );
+
+    this.sendEventOnConnect(connection);
   }
 
+  handleDisconnect(connection: Party.Connection) {
+    this.players = this.players.filter((con) => con.id !== connection.id);
+
+    this.party.broadcast(
+      JSON.stringify(MessageBuilder.userOffline(connection))
+    );
+  }
+
+  handleClose(connection: Party.Connection) {
+    this.handleDisconnect(connection);
+  }
+
+  handleError(connection: Party.Connection) {
+    this.handleDisconnect(connection);
+  }
+
+  //typesafe send function
   send<K extends keyof TEventEmitters>(
     connection: Party.Connection,
     data: { event: K; data: TEventEmitters[K] }
@@ -281,10 +236,13 @@ export abstract class PartyWorks<
 
   //this sends a client recognized error, event prop is optional
   //event will help in easy error association, or can be used as custom tags on error
-  sendError<T extends keyof TEventsListener, K extends keyof TEventEmitters>(
+  protected sendError<
+    T extends keyof TEventsListener,
+    K extends keyof TEventEmitters
+  >(
     connection: Party.Connection,
     data: { error: any; event?: string | K | T; rid?: string }
-  ) {
+  ): void {
     try {
       const stringifiedData = JSON.stringify(data);
 
@@ -294,7 +252,8 @@ export abstract class PartyWorks<
     }
   }
 
-  broadcast<K extends keyof TBroadcasts>(
+  //typesafe broadcast function for the room
+  protected /*final*/ broadcast<K extends keyof TBroadcasts>(
     data: { event: K; data: TBroadcasts[K] },
     ignored?: string[]
   ): void {
@@ -306,4 +265,77 @@ export abstract class PartyWorks<
       console.log(`error broadcasting data`);
     }
   }
+
+  //todo
+  // adding a updatePresence & udpateUserMeta function, to let users update it on thier own as well
+  // also adding optional validators for Presence, so the users can easily validate it on the server if they want
+
+  //*-----------------------------------
+  //* Potential Overriders, these have default functionality but can also be overriden
+  //*-----------------------------------
+
+  //so this should have some basic properties, but can be easily ovverriden
+  onConnect(
+    connection: Party.Connection,
+    ctx: Party.ConnectionContext
+  ): void | Promise<void> {
+    this.handleConnect(connection as Player, ctx);
+  }
+
+  onMessage(
+    message: string | ArrayBuffer,
+    sender: Party.Connection
+  ): void | Promise<void> {}
+
+  onClose(connection: Party.Connection): void | Promise<void> {
+    this.handleClose(connection);
+  }
+
+  onError(connection: Party.Connection, error: Error): void | Promise<void> {
+    this.handleError(connection);
+  }
+
+  //*-----------------------------------
+  //* Overriders, default functionality is noop these are supposed to be overriden by the users
+  //*-----------------------------------
+
+  //? this is for getting roomState maybe,
+  roomState(): any | Promise<any> {}
+
+  //this is for sending custom
+  customDataOnConnect(player: Player<TState, TEventEmitters>): void {}
+
+  //maybe this is gonna be the custom state on connect
+  customRoomState(player: Player<TState, TEventEmitters>): any {}
+
+  //send the event that you want to send on connect here
+  sendEventOnConnect(player: Player<TState, TEventEmitters>) {}
+
+  setup() {}
+  setCustomEvent() {}
+
+  customEvents(data: CustomEvents<TEventsListener, TState>) {
+    this._customEvents = data;
+  }
+
+  //this will send all your custom events related errors, for both handlers & validators
+  catchAll(
+    error: any,
+    {}: { data: any; rid: any; event: any }, //todo this can be any, in case of unknown events maybe we throw 404 instead :/
+    player: Party.Connection
+  ) {}
+
+  //this handle notfound events, this should be overridden by the user, default is noop
+  notFound(parsedData: any, player: Party.Connection) {}
+
+  //todo maybe adding a global middleware kinda setup for custom events
+  globalMiddlewares() {}
+
+  //ok how should error event look like
+  //event: "error", for: "eventName" , reason: User's imlplementation, could be an object or string, or undefined
+  //this makes error handling difficult for emitAwait events
+  //but this makes error handling simple for globalized events, just a simple useError("eventName")
+  //maybe then we can for emitAwait events just listen for both  error & event props?
+  //wait if useError is gonna be the prop and for eventName, we can easily listen for events with error property that makes sense!
+  sendErrorEvent() {}
 }
