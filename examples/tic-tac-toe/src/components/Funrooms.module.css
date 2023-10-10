@@ -1,0 +1,39 @@
+.rootContainer {
+  flex: 1;
+  height: 100dvh;
+  width: 100%;
+  max-width: 100vw;
+  display: flex;
+  background-color: black;
+}
+.userSection {
+  background-color: aqua;
+  flex: 1;
+  /* min-width: 100px; */
+}
+
+.userProfileCard {
+  display: flex;
+  margin: 12px 0;
+}
+
+.gameSection {
+  background-color: green;
+  flex: 5;
+  height: 100%;
+}
+
+.chatSection {
+  background-color: bisque;
+  flex: 1;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+
+  min-width: 100px;
+}
+
+.chatsContainer {
+  flex: 1;
+  overflow: scroll;
+}

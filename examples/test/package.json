@@ -1,0 +1,19 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "partykit dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "partykit": "^0.0.29",
+    "partyworks-server": "^0.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.3"
+  }
+}

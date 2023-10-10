@@ -1,0 +1,48 @@
+.canvas {
+  display: block;
+  margin: 0 auto;
+}
+
+.playersBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  margin: 20px 0;
+  background-color: cornflowerblue;
+}
+
+.playerContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.playerTurnContainer {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.playerCard {
+  display: flex;
+}
+
+.playerCardImg {
+  height: 40px;
+  width: 40px;
+  border-radius: 500px;
+}
+
+.playerInfoContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.playerInfoUsername {
+  font-weight: 500;
+}
+
+.playeInfoRole {
+  font-size: 22px;
+}

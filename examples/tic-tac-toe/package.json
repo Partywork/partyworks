@@ -1,0 +1,35 @@
+{
+  "name": "new",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:next": "next dev",
+    "dev:partykit": "partykit dev",
+    "dev": "concurrently npm:dev:* --kill-others",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "formik": "^2.4.5",
+    "next": "13.5.4",
+    "partykit": "^0.0.29",
+    "partyworks-client": "^0.0.0",
+    "partyworks-react": "^0.0.0",
+    "partyworks-server": "^0.0.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "use-sync-external-store": "^1.2.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/uuid": "^9.0.4",
+    "concurrently": "^8.2.1",
+    "eslint": "^8",
+    "eslint-config-next": "13.5.4",
+    "typescript": "^5"
+  }
+}

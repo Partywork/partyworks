@@ -1,0 +1,55 @@
+.gameCardContainer {
+  background-color: white;
+  height: 200px;
+  width: 200px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  flex-shrink: 0;
+
+  border-radius: 7.5px;
+  margin: 10px;
+}
+
+.gameCardImg {
+  height: 60%;
+  width: 60%;
+}
+
+.playerCardImg {
+  border-radius: 500px;
+  height: 30px;
+  width: 30px;
+  background-color: aqua;
+  margin: 10px 2.5px;
+}
+
+.gameCardBottomContainer {
+  display: flex;
+  align-items: center;
+}
+
+.playersInfoContainer {
+  display: flex;
+}
+
+.joinButton {
+  cursor: pointer;
+  padding: 5px 7.5px;
+  border: transparent;
+  background-color: aqua;
+  color: #555;
+  font-weight: bold;
+  margin: 0 10px;
+  border-radius: 7.5px;
+}
+
+.playedGamesContainer {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+
+  overflow: auto; /* Change to 'auto' to enable scroll when needed */
+}

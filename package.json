@@ -1,0 +1,28 @@
+{
+  "name": "@partyworks/repo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "the party framework for the party people",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "start": "npm start -w partyworks-server",
+    "example": "npm run dev -w test"
+  },
+  "keywords": [
+    "multiplayer",
+    "bob",
+    "realtime",
+    "great bob",
+    "websockets",
+    "all hail bob"
+  ],
+  "author": "bob",
+  "license": "ISC",
+  "devDependencies": {
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2"
+  }
+}

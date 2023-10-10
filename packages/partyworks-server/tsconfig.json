@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "lib": ["dom", "es2020"],
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "declaration": true,
+    "moduleResolution": "node",
+    "allowJs": true, //*Yo! this thing allows javascript files to be included as well, we need this for generated protobuf files
+    "removeComments": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false, //!true in production
+    "noUnusedParameters": false, //!true in production
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "typeRoots": ["./src/index.d.ts", "./node_modules/@types"],
+    "allowUnusedLabels": true
+  },
+  // "exclude": ["./src/**/*.test.ts"],
+  "include": ["./src/**/*.ts", "./src/**/*.js"]
+}
