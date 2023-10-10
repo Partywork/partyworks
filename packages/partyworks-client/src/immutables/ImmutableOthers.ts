@@ -1,9 +1,4 @@
-export type Peer<TPresence = any, TUserMeta = any> = {
-  readonly userId: string;
-  readonly presence?: TPresence;
-  readonly info: TUserMeta;
-  // readonly data: any // ? this can be the data of the user
-};
+import type { Peer } from "../types";
 
 export class ImmutablePeers<TPresence, TUserMeta> {
   //this neeeds to have a map of others

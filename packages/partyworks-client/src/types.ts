@@ -1,3 +1,5 @@
+//todo maybe turn the InternalEvents into a shared package
+
 export enum InternalEvents {
   //* Connection
   CONNECT = 0, //SERVER ONLY
@@ -15,4 +17,24 @@ export enum InternalEvents {
 
   //* User
   PRESENSE_UPDATE = 300, //when a user sends a presense update event
+}
+
+export interface BaseUser {
+  data: {
+    id: string; //internal partykit id or something
+    _pkUrl: string;
+  };
+}
+
+export type Peer<TPresence = any, TUserMeta = any> = {
+  readonly userId: string;
+  readonly presence?: TPresence;
+  readonly info: TUserMeta;
+  // readonly data: any // ? this can be the data of the user
+};
+
+//todo self can have other data maybe,
+export interface Self<T = any, K = any> extends BaseUser {
+  info: T;
+  presence?: K;
 }

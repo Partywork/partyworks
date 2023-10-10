@@ -1,23 +1,11 @@
 import type { PartySocketOptions } from "../partysocket";
 import PartySocket from "../partysocket";
 import { ImmutableObject } from "../immutables/ImmutableObject";
-import type { Peer } from "../immutables/ImmutableOthers";
+import type { Peer, Self } from "../types";
 import { ImmutablePeers } from "../immutables/ImmutableOthers";
 import { PartyWorksEventSource, SingleEventSource } from "./EventSource";
-import { InternalEvents } from "../types";
+import { InternalEvents, type BaseUser } from "../types";
 import { v4 as uuid } from "uuid";
-
-interface BaseUser {
-  data: {
-    id: string; //internal partykit id or something
-    _pkUrl: string;
-  };
-}
-
-export interface Self<T = any, K = any> extends BaseUser {
-  info: T;
-  presence?: K;
-}
 
 type EmitAwaiOptions = {
   listenEvent?: string;
@@ -31,9 +19,6 @@ type EmitAwaiOptions = {
   noopOnDisonnect?: boolean;
   shouldQueue?: boolean;
 };
-//we need to provide 2 things
-//one interface for emiting events, this can lead to duplicate stuff, but can be easily extedmed with a base
-//other interface is for listening events
 
 //this is room
 
