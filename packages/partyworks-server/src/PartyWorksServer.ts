@@ -86,6 +86,7 @@ export abstract class PartyWorks<
       }
       switch (parsedData.event) {
         case InternalEvents.PRESENSE_UPDATE: {
+          //todo listen for type 'set' | 'partial' fields as well
           //todo implement proper merging, at sub field levels as well
           conn.presence = { ...conn.presence, ...parsedData.data };
 
