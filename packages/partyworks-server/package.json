@@ -1,6 +1,6 @@
 {
   "name": "partyworks-server",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "partyworks server for the party people",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "playground": "partykit dev"
+    "playground": "partykit dev",
+    "pub": "npm version patch  && npm run build &&  npm publish --tag experimental"
   },
   "keywords": [
     "partyworks",

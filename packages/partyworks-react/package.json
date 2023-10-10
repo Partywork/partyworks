@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "pub": "npm version patch  && tsup &&  npm publish --tag experimental"
   },
   "keywords": [
     "partyworks",
