@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useRef,
   useState,
+  // TODO replace this with the shim
   useSyncExternalStore,
 } from "react";
 
@@ -13,7 +14,9 @@ import type {
   PartyClient,
   RoomBroadcastEventListener,
 } from "partyworks-client";
-import { PartyWorksRoom } from "partyworks-client";
+import { PartyWorksRoom, shallow } from "partyworks-client";
+
+import { useSyncExternalStoreWithSelector } from "use-sync-external-store/shim/with-selector";
 
 //* API
 //* [createRoomContext, RoomProvider, useRoom, useStatus]
@@ -25,6 +28,8 @@ interface RoomProviderProps {
   roomId: string;
   children: React.ReactNode;
 }
+
+const same: <T>(data: T) => T = (data) => data;
 
 export function createRoomContext<
   TPresence = any,
@@ -77,7 +82,7 @@ export function createRoomContext<
   function useRoom() {
     const room = useContext(RoomContext);
 
-    if (!room) throw new Error(`room acces before initialization`);
+    if (!room) throw new Error(`room access before initialization`);
 
     return room;
   }
@@ -88,14 +93,103 @@ export function createRoomContext<
     return empty;
   }
 
-  function useOthers(): readonly Peer<TPresence, TUserMeta>[] {
+  function useOthers(): readonly Peer<TPresence, TUserMeta>[];
+  function useOthers<T>(
+    selector: (others: readonly Peer<TPresence, TUserMeta>[]) => T,
+    isEqual?: (prev: T, curr: T) => boolean
+  ): T;
+  function useOthers<T>(
+    selector?: (others: readonly Peer<TPresence, TUserMeta>[]) => T,
+    isEqual?: (prev: T, curr: T) => boolean
+  ): T | readonly Peer<TPresence, TUserMeta>[] {
     const room = useRoom();
 
     const sub = room.eventHub.others.subscribe;
     const snap = room.getOthers;
     const emp = emptyOthers;
 
-    return useSyncExternalStore(sub, snap, emp);
+    return useSyncExternalStoreWithSelector(
+      sub,
+      snap,
+      emp,
+      selector || same,
+      isEqual
+    );
+  }
+
+  function useOthersMapped<T>(
+    selector: (other: Peer<TPresence, TUserMeta>) => T,
+    isEqual?: (prev: T, curr: T) => boolean
+  ): ReadonlyArray<readonly [userId: string, data: T]> {
+    const mapSelector = useCallback(
+      (others: readonly Peer<TPresence, TUserMeta>[]) =>
+        others.map((other) => [other.userId, selector(other)] as const),
+      [selector]
+    );
+
+    const mapIsEqual = useCallback(
+      (
+        a: ReadonlyArray<readonly [userId: string, data: T]>,
+        b: ReadonlyArray<readonly [userId: string, data: T]>
+      ): boolean => {
+        if (a.length !== b.length) return false;
+
+        if (isEqual) {
+          return a.every(([userId, value], index) => {
+            const [userBId, userBValue] = b[index];
+            return userId === userBId && isEqual(value, userBValue);
+          });
+        }
+
+        return a.every(([userId, value], index) => {
+          const [userBId, userBValue] = b[index];
+          return userId === userBId && Object.is(value, userBValue);
+        });
+      },
+      [isEqual]
+    );
+
+    return useOthers(mapSelector, mapIsEqual);
+  }
+
+  function useOthersConnectionIds(): readonly string[] {
+    const selector = useCallback(
+      (others: readonly Peer<TPresence, TUserMeta>[]): string[] => {
+        return others.map((user) => user.userId);
+      },
+      []
+    );
+
+    return useOthers(selector, shallow);
+  }
+
+  function useOther<T>(
+    userId: string,
+    selector: (other: Peer<TPresence, TUserMeta>) => T,
+    isEqual?: (prev: T, curr: T) => boolean
+  ): T {
+    const otherSelector = useCallback(
+      (others: readonly Peer<TPresence, TUserMeta>[]) => {
+        const other = others.find((other) => other.userId === userId);
+        if (other === undefined) {
+          throw new Error(`No such peer user with userId ${userId} exists`);
+        }
+        return selector(other);
+      },
+      [userId, selector]
+    );
+
+    const otherIsEqual = useCallback(
+      (prev: T, curr: T): boolean => {
+        const eq = isEqual ?? Object.is;
+        return eq(prev, curr);
+      },
+      [isEqual]
+    );
+
+    const other = useOthers(otherSelector, otherIsEqual);
+
+    return other;
   }
 
   function useSelf() {
@@ -233,6 +327,9 @@ export function createRoomContext<
     RoomProvider,
     useRoom,
     useOthers,
+    useOthersConnectionIds,
+    useOthersMapped,
+    useOther,
     useSelf,
     useMyPresence,
     useUpdateMyPresence,
