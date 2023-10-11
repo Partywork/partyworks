@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "partykit": "^0.0.29",
-    "partyworks-server": "^0.0.0"
+    "partyworks-server": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.8.3"
