@@ -59,6 +59,11 @@ type InternalEventsMap =
       data: { data: any; userId: string };
     };
 
+type UpdateMyPresence<TPresence> = {
+  (data: Partial<TPresence>, type?: "partial"): void;
+  (data: TPresence, type: "set"): void;
+};
+
 export enum InternalListeners {
   Message = "message",
   SelfUpdate = "selfUpdate",
@@ -235,6 +240,7 @@ export class PartyWorksRoom<
 
             case InternalEvents.PRESENSE_UPDATE: {
               this._peers.updatePeer(data.data.userId, data.data.data);
+              console.log(`presence other notifie`);
               this.eventHub.others.notify({});
               // this.emit("peersUpdate", {});
               break;
@@ -311,12 +317,10 @@ export class PartyWorksRoom<
     });
   }
 
-  updatePresence(data: Partial<TPresence>, type?: "partial"): void;
-  updatePresence(data: TPresence, type: "set"): void;
-  updatePresence(
+  updatePresence: UpdateMyPresence<TPresence> = (
     data: TPresence | Partial<TPresence>,
     type: "partial" | "set" = "partial"
-  ) {
+  ): void => {
     if (type === "partial") {
       this._self?.partialSet("presence", data);
     } else {
@@ -328,7 +332,7 @@ export class PartyWorksRoom<
     );
 
     // this.emit("presenceUpdate", data);
-  }
+  };
 
   broadcast = (data: TBroadcastEvent) => {
     this._partySocket.send(
