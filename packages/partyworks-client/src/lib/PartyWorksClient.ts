@@ -237,14 +237,10 @@ export class PartyWorksRoom<
               this._peers.updatePeer(data.data.userId, data.data.data);
               this.eventHub.others.notify({});
               // this.emit("peersUpdate", {});
-              // console.log(data);
               break;
             }
 
             case InternalEvents.BROADCAST: {
-              // console.log(`ccoming`);
-              console.log(data.data);
-
               this.eventHub.event.notify({
                 data: data.data.data,
                 userId: data.data.userId,
@@ -282,8 +278,6 @@ export class PartyWorksRoom<
         //? .onError("error", () => {})
         if (parsedData.error && !parsedData.rid) {
           this.eventHub.error.notify(parsedData);
-
-          console.log(`here`);
           return;
         } else if (parsedData.error && parsedData.event && parsedData.rid) {
           // ? ok so how do we identify, normal .on from .on of emit await?
@@ -409,8 +403,6 @@ export class PartyWorksRoom<
           event,
           rid: requestId,
         });
-
-        console.log(stringifiedObjectResponse);
 
         this._partySocket.send(stringifiedObjectResponse);
         console.log(`[ Sent ${event as string} ]`);

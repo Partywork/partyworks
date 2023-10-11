@@ -21,12 +21,7 @@ export class SingleEventSource<T> {
   }
 
   subscribe = (listener: Listener<T>): UnsubscribeListener => {
-    console.log(this._listeners.size);
-    console.log(`new added to ser`);
-
     this._listeners.add(listener);
-    console.log(`after adding`);
-    console.log(this._listeners.size);
 
     return () => this._listeners.delete(listener);
   };
