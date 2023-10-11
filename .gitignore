@@ -131,5 +131,11 @@ dist
 .DS_Store
 /TODO.md
 .partykit
-
 .jampack
+
+# this is playground, used for testing & experimenting
+playground/
+
+# TODO add tic-tac-toe as a proper example
+tic-tac-toe/
+test/
