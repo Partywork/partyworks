@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "start": "npm start -w partyworks-server",
+    "dev": "concurrently \"npm run dev -w partyworks-server\" \"npm run dev -w partyworks-client\" \"npm run dev -w partyworks-react\"  ",
     "example": "npm run dev -w test"
   },
   "keywords": [
@@ -22,6 +23,7 @@
   "author": "bob",
   "license": "ISC",
   "devDependencies": {
+    "concurrently": "^8.2.1",
     "tsup": "^7.2.0",
     "typescript": "^5.2.2"
   }
