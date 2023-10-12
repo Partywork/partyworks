@@ -418,7 +418,11 @@ export class PartyWorksRoom<
       this.eventHub.myPresence.notify(this._self?.current.presence!);
       this.eventHub.self.notify(this._self.current!);
       this._partySocket.send(
-        JSON.stringify({ event: InternalEvents.PRESENSE_UPDATE, data })
+        JSON.stringify({
+          event: InternalEvents.PRESENSE_UPDATE,
+          data,
+          _pwf: "-1",
+        })
       );
     }
 
@@ -427,7 +431,7 @@ export class PartyWorksRoom<
 
   broadcast = (data: TBroadcastEvent) => {
     this._partySocket.send(
-      JSON.stringify({ event: InternalEvents.BROADCAST, data })
+      JSON.stringify({ event: InternalEvents.BROADCAST, data, _pwf: "-1" })
     );
   };
 
