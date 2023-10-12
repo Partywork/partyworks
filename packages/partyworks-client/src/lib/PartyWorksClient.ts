@@ -435,6 +435,7 @@ export class PartyWorksRoom<
     const dataToSend = JSON.stringify({
       event,
       data,
+      _pwf: "-1",
     });
     this._partySocket.send(dataToSend);
   }
@@ -497,6 +498,7 @@ export class PartyWorksRoom<
           },
           event,
           rid: requestId,
+          _pwf: "-1",
         });
 
         this._partySocket.send(stringifiedObjectResponse);
