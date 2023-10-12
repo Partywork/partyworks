@@ -11,6 +11,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "dev": "tsc -w",
     "playground": "partykit dev",
     "pub": "npm version patch  && npm run build &&  npm publish --tag experimental"
   },
