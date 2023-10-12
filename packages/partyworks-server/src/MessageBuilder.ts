@@ -74,6 +74,17 @@ export class MessageBuilder {
     };
   }
 
+  static metaUpdate(player: Player) {
+    return {
+      event: InternalEvents.USERMETA_UPDATE,
+      data: {
+        userId: player.id,
+        data: player.state?.info,
+      },
+      _pwf: "-1",
+    };
+  }
+
   static broadcastEvent(player: Player, data: any) {
     return {
       event: InternalEvents.BROADCAST,

@@ -39,7 +39,8 @@ export abstract class PartyWorks<
   TState = any,
   TEventsListener extends Record<string, any> = {},
   TEventEmitters extends Record<string, any> = {},
-  TBroadcasts extends Record<string, any> = any
+  TBroadcasts extends Record<string, any> = any,
+  TPresence = any
 > implements Party.Server
 {
   readonly partyworks: Party.Party & {
@@ -49,7 +50,7 @@ export abstract class PartyWorks<
     ) => void;
   };
   //todo :/ not really needed, well maybe for type safety, huh, dunno, since partykit has added getState | setState to the connection
-  players: Player<TState, TEventEmitters>[] = [];
+  players: Player<TState, TEventEmitters, TPresence>[] = [];
 
   private _customEvents: CustomEvents<TEventsListener, TState> =
     {} as CustomEvents<TEventsListener, TState>;
@@ -270,6 +271,26 @@ export abstract class PartyWorks<
   //todo
   // adding a updatePresence & udpateUserMeta function, to let users update it on thier own as well
   // also adding optional validators for Presence, so the users can easily validate it on the server if they want
+
+  //ok here we take either a party.connection or a playerid
+  //this function will give an api to update a user's presence
+  updatePresence(conn: Party.Connection, presence: Partial<TPresence>) {
+    const player = conn as Player<any, any, TPresence>; //TYPECASTING :/
+
+    player.presence = { ...player.presence, ...presence };
+
+    this.party.broadcast(JSON.stringify(MessageBuilder.presenceUpdate(player)));
+  }
+
+  //ok how should we approach this
+  //we will just broadast the meta update & the users need to make sure they do the setState before hand
+  //since the way we do it rn depends on user setting the info property on serializeObject
+  //well this is more llike broadcast userMeta at this point :/
+  updateUserMeta(conn: Party.Connection) {
+    this.party.broadcast(
+      JSON.stringify(MessageBuilder.metaUpdate(conn as Player))
+    );
+  }
 
   //*-----------------------------------
   //* Potential Overriders, these have default functionality but can also be overriden
