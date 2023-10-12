@@ -35,7 +35,7 @@ export type Peer<TPresence = any, TUserMeta = any> = {
 };
 
 //todo self can have other data maybe,
-export interface Self<T = any, K = any> extends BaseUser {
-  info: T;
-  presence?: K;
+export interface Self<TPresence = any, TUserMeta = any> extends BaseUser {
+  info: TUserMeta;
+  presence?: TPresence;
 }

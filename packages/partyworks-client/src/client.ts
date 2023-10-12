@@ -5,11 +5,11 @@ import { PartyWorksRoom } from "./lib/PartyWorksClient";
 
 export interface PartyClient {
   enter: <
-    TPresence,
-    TUserMeta,
-    TBroadcastEvent,
-    TEvents extends Record<string, any>,
-    TEventsEmitter
+    TPresence = any,
+    TUserMeta = any,
+    TBroadcastEvent = any,
+    TEvents extends Record<string, any> = {},
+    TEventsEmitter = any
   >(
     roomId: string
   ) => PartyWorksRoom<

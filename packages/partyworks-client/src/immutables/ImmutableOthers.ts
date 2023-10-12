@@ -21,6 +21,10 @@ export class ImmutablePeers<TPresence, TUserMeta> {
     return this.cachedPeers;
   }
 
+  getPeer(peerId: string) {
+    return this._connectedPeers.get(peerId);
+  }
+
   //ADDING USERS IN BULK, USED WHEN INITIAL ROOM STATE IS SYNCED
   addPeers(peers: Peer<TPresence, TUserMeta>[]) {
     for (let peer of peers) {
@@ -30,9 +34,14 @@ export class ImmutablePeers<TPresence, TUserMeta> {
     this.invalidateCache();
   }
 
+  //todo maybe return the peer from here
   addPeer(peer: Peer<TPresence, TUserMeta>) {
     this.invalidateCache();
-    this._connectedPeers.set(peer.userId, Object.freeze(peer));
+
+    const frozenPeer = Object.freeze(peer);
+    this._connectedPeers.set(peer.userId, frozenPeer);
+
+    return frozenPeer;
   }
 
   //for now we're just only updating the peer presence
@@ -56,12 +65,25 @@ export class ImmutablePeers<TPresence, TUserMeta> {
         updatedPeer.info = info;
       }
 
-      this._connectedPeers.set(peerId, Object.freeze(updatedPeer));
+      const frozenPeer = Object.freeze(updatedPeer);
+
+      this._connectedPeers.set(peerId, Object.freeze(frozenPeer));
+      return frozenPeer;
     }
   }
 
   disconnectPeer(peerId: string) {
     this.invalidateCache();
-    this._connectedPeers.delete(peerId);
+
+    // Retrieve the peer before deleting it
+    const deletedPeer = this._connectedPeers.get(peerId);
+
+    if (deletedPeer) {
+      // Delete the peer from the map
+      this._connectedPeers.delete(peerId);
+
+      // Return the deleted peer
+      return deletedPeer;
+    }
   }
 }

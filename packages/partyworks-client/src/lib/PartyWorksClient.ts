@@ -3,7 +3,11 @@ import PartySocket from "../partysocket";
 import { ImmutableObject } from "../immutables/ImmutableObject";
 import type { Peer, Self } from "../types";
 import { ImmutablePeers } from "../immutables/ImmutableOthers";
-import { PartyWorksEventSource, SingleEventSource } from "./EventSource";
+import {
+  PartyWorksEventSource,
+  SingleEventSource,
+  type UnsubscribeListener,
+} from "./EventSource";
 import { InternalEvents, type BaseUser } from "../types";
 import { v4 as uuid } from "uuid";
 
@@ -20,14 +24,38 @@ type EmitAwaiOptions = {
   shouldQueue?: boolean;
 };
 
-//this is room
+type OthersEvent<TPresence, TUserMeta> =
+  | { type: "set" } //this event is when the ROOM_STATE is recieved and peers are populated
+  | { type: "enter"; other: Peer<TPresence, TUserMeta> }
+  | { type: "leave"; other: Peer<TPresence, TUserMeta> }
+  | {
+      type: "presenceUpdate";
+      updates: Partial<TPresence>;
+      other: Peer<TPresence, TUserMeta>;
+    }
+  | {
+      type: "metaUpdate";
+      updates: Partial<TUserMeta>;
+      other: Peer<TPresence, TUserMeta>;
+    };
 
-//* OTHERS  [option of filter, immutable ref]
-//* SELF [getPresence, updatePresence, getOthers, getSelf, getStatus]
-//* SUBSCRIE TO UPDATES [ boradcast, myPresence,  others, status,  ]
-//* STATUS [connect, ]
-//* BROADCAST API [ broadcastEvent]
-//* CUSTOM EVENTS API
+type Subscribe<T> = (data: T) => void;
+
+type RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent> = {
+  allMessages: Subscribe<MessageEvent<any>>;
+  message: Subscribe<MessageEvent<any>>;
+  others: Subscribe<{
+    others: Peer<TPresence, TUserMeta>[];
+    event: OthersEvent<TPresence, TUserMeta>;
+  }>;
+  self: Subscribe<Self<TPresence, TUserMeta>>; //todo maybe make this an update type like other 'presenceUpdated' | 'metaUpdated'
+  myPresence: Subscribe<TPresence>;
+  event: Subscribe<
+    RoomBroadcastEventListener<TPresence, TUserMeta, TBroadcastEvent>
+  >;
+  //todo improve on typescript, atleast the ability to add a generic and override the values should be there
+  error: Subscribe<{ error: any; event?: string }>;
+};
 
 //i think for the internal events we can have rpc based format, but custom events can be tricky the ones that don't follow req/res format
 type InternalEventsMap =
@@ -109,18 +137,21 @@ export class PartyWorksRoom<
 > extends PartyWorksEventSource<TEvents> {
   _partySocket: PartySocket;
   _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
-  _self?: ImmutableObject<Self<TUserMeta, TPresence>>; //not sure how to structure this one?
+  _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
   _peers: ImmutablePeers<TPresence, TUserMeta>;
   eventHub: {
     allMessages: SingleEventSource<MessageEvent<any>>; //for all the messages, servers as socket.addEventlistener("message")
     message: SingleEventSource<MessageEvent<any>>; //for all but internal messages, internal ones will be ignored, most likely user's use this one
-    others: SingleEventSource<any>; //others/peers in the room
-    self: SingleEventSource<any>; //self
-    myPresence: SingleEventSource<any>; //a local my presence
+    others: SingleEventSource<{
+      others: Peer<TPresence, TUserMeta>[];
+      event: OthersEvent<TPresence, TUserMeta>;
+    }>; //others/peers in the room
+    self: SingleEventSource<Self<TPresence, TUserMeta>>; //self
+    myPresence: SingleEventSource<TPresence>; //a local my presence
     event: SingleEventSource<
       RoomBroadcastEventListener<TPresence, TUserMeta, TBroadcastEvent>
     >; //this is for broadcast api
-    error: SingleEventSource<any>; //this is for event & non event based errors
+    error: SingleEventSource<{ error: any; event?: string }>; //this is for event & non event based errors
   };
 
   constructor(options: PartySocketOptions) {
@@ -222,22 +253,36 @@ export class PartyWorksRoom<
                 (user) => user.userId !== this._self?.current.data.id
               );
               this._peers.addPeers(usersWithoutSelf);
-              this.eventHub.others.notify({});
-              this.eventHub.self.notify({});
+              this.eventHub.others.notify({
+                others: this._peers.current,
+                event: { type: "set" },
+              });
+              this.eventHub.self.notify(this._self.current);
               // this.emit("roomUpdate", { data: { others: this._peers.current } });
               break;
             }
 
             case InternalEvents.USER_JOINED: {
-              this._peers.addPeer(data.data as any);
-              this.eventHub.others.notify({});
+              const peer = this._peers.addPeer(data.data as any);
+
+              this.eventHub.others.notify({
+                others: this._peers.current,
+                event: { type: "enter", other: peer },
+              });
               // this.emit("userJoined", { peer: data.data });
               break;
             }
 
             case InternalEvents.USER_LEFT: {
-              this._peers.disconnectPeer(data.data.userId);
-              this.eventHub.others.notify({});
+              const peer = this._peers.disconnectPeer(data.data.userId);
+
+              if (peer) {
+                this.eventHub.others.notify({
+                  others: this._peers.current,
+                  event: { type: "leave", other: peer },
+                });
+              }
+
               // this.emit("userleft", { peer: data.data });
               break;
             }
@@ -245,15 +290,24 @@ export class PartyWorksRoom<
             case InternalEvents.PRESENSE_UPDATE: {
               if (data.data.userId === this._self?.current.data.id) {
                 this._self.partialSet("presence", data.data.data);
-                this.eventHub.self.notify({});
+                this.eventHub.self.notify(this._self.current);
+                this.eventHub.myPresence.notify(this._self?.current.presence!);
 
                 return;
               }
 
-              this._peers.updatePeer(data.data.userId, {
+              const peer = this._peers.updatePeer(data.data.userId, {
                 presence: data.data.data,
               });
-              this.eventHub.others.notify({});
+              if (peer)
+                this.eventHub.others.notify({
+                  others: this._peers.current,
+                  event: {
+                    type: "presenceUpdate",
+                    updates: data.data.data,
+                    other: peer,
+                  },
+                });
               // this.emit("peersUpdate", {});
               break;
             }
@@ -261,14 +315,22 @@ export class PartyWorksRoom<
             case InternalEvents.USERMETA_UPDATE: {
               if (data.data.userId === this._self?.current.data.id) {
                 this._self.partialSet("info", data.data.data);
-                this.eventHub.self.notify({});
+                this.eventHub.self.notify(this._self.current);
                 return;
               }
 
-              this._peers.updatePeer(data.data.userId, {
+              const peer = this._peers.updatePeer(data.data.userId, {
                 info: data.data.data,
               });
-              this.eventHub.others.notify({});
+              if (peer)
+                this.eventHub.others.notify({
+                  others: this._peers.current,
+                  event: {
+                    type: "metaUpdate",
+                    updates: data.data.data,
+                    other: peer,
+                  },
+                });
 
               break;
             }
@@ -319,22 +381,18 @@ export class PartyWorksRoom<
           //? huh dunno really, what are the chances :/ minimal
 
           //-_- it's doing the same thing as below
-          for (let cb of this.events[
-            parsedData.event as keyof InternalListenersMap
-          ]) {
+          for (let cb of this.events[parsedData.event]) {
             cb.exec(parsedData);
           }
 
           return;
         }
 
-        if (!this.events[parsedData.event as keyof InternalListenersMap]) {
+        if (!this.events[parsedData.event]) {
           return;
         }
 
-        for (let cb of this.events[
-          parsedData.event as keyof InternalListenersMap
-        ]) {
+        for (let cb of this.events[parsedData.event]) {
           cb.exec(parsedData);
         }
       } catch (error) {
@@ -348,15 +406,21 @@ export class PartyWorksRoom<
     data: TPresence | Partial<TPresence>,
     type: "partial" | "set" = "partial"
   ): void => {
-    if (type === "partial") {
-      this._self?.partialSet("presence", data);
-    } else {
-      this._self?.set({ presence: data as TPresence });
+    //todo make sure the self is always there? for presence updates locally.
+    //it can be left in a non ack state, where we don't consider it acked yet
+    //ok anyways revise this
+    if (this._self) {
+      if (type === "partial") {
+        this._self?.partialSet("presence", data);
+      } else {
+        this._self?.set({ presence: data as TPresence });
+      }
+      this.eventHub.myPresence.notify(this._self?.current.presence!);
+      this.eventHub.self.notify(this._self.current!);
+      this._partySocket.send(
+        JSON.stringify({ event: InternalEvents.PRESENSE_UPDATE, data })
+      );
     }
-    this.eventHub.self.notify({});
-    this._partySocket.send(
-      JSON.stringify({ event: InternalEvents.PRESENSE_UPDATE, data })
-    );
 
     // this.emit("presenceUpdate", data);
   };
@@ -456,7 +520,59 @@ export class PartyWorksRoom<
   //this should make up to be the individual es
   //a single subscribe is beeter than
   //todo add a single subscribe for javascript folks
-  subscribe() {}
+
+  subscribe<
+    K extends keyof RoomEventSubscriberMap<
+      TPresence,
+      TUserMeta,
+      TBroadcastEvent
+    >
+  >(
+    event: K,
+    callback: RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent>[K]
+  ): UnsubscribeListener;
+  subscribe<T>(
+    event: keyof RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent>,
+    callback: Subscribe<T>
+  ): UnsubscribeListener;
+
+  subscribe<T>(
+    event: keyof RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent>,
+    callback: Subscribe<T>
+  ): UnsubscribeListener {
+    switch (event) {
+      case "allMessages": {
+        return this.eventHub.allMessages.subscribe(callback as any);
+      }
+      case "message": {
+        return this.eventHub.message.subscribe(callback as any);
+      }
+      case "error": {
+        return this.eventHub.error.subscribe(callback as any);
+      }
+      case "event": {
+        return this.eventHub.event.subscribe(callback as any);
+      }
+
+      case "myPresence": {
+        return this.eventHub.myPresence.subscribe(callback as any);
+      }
+
+      case "others": {
+        return this.eventHub.others.subscribe(callback as any);
+      }
+
+      case "self": {
+        return this.eventHub.self.subscribe(callback as any);
+      }
+
+      default: {
+        //? should we throw
+        // console.warn(`Unknown event on room.subsribe ${event}`);
+        throw new Error(`Unknown event on room.subsribe ${event}`);
+      }
+    }
+  }
 
   leave() {
     this._partySocket.close();
