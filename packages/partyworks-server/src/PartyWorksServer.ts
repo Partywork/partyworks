@@ -103,6 +103,8 @@ export abstract class PartyWorks<
         }
 
         case InternalEvents.BROADCAST: {
+          if (!this.validateBroadcast(conn, parsedData.data)) return;
+
           console.log(`broadcastig`);
           this.party.broadcast(
             JSON.stringify(
@@ -338,6 +340,15 @@ export abstract class PartyWorks<
   //let's you check for and validate the presenceUpdates for a user
   //you should never throw an error in this one, return a booolean to indicate if this should fail or not fail
   validatePresence(
+    player: Player<TState, TEventEmitters, TPresence>,
+    data: any
+  ): boolean {
+    return true;
+  }
+
+  //let's you checks and validate the broadcast messages
+  //you should never throw an error in this one, return a booolean to indicate if this should fail or not fail
+  validateBroadcast(
     player: Player<TState, TEventEmitters, TPresence>,
     data: any
   ): boolean {
