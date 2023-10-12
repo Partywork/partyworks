@@ -84,73 +84,73 @@ export abstract class PartyWorks<
       //todo, this is how we track internal vs user messages [_pwf flag value to be set "-1" for internal events]
       //todo ok here internal events also mean custom events sent by user via the client's emit or emitAwait
       if (parsedData.event && parsedData._pwf === "-1") {
-      }
-      switch (parsedData.event) {
-        case InternalEvents.PRESENSE_UPDATE: {
-          if (!this.validatePresence(conn, parsedData.data)) return;
+        switch (parsedData.event) {
+          case InternalEvents.PRESENSE_UPDATE: {
+            if (!this.validatePresence(conn, parsedData.data)) return;
 
-          //todo listen for type 'set' | 'partial' fields as well
-          //todo implement proper merging, at sub field levels as well
-          conn.presence = { ...conn.presence, ...parsedData.data };
+            //todo listen for type 'set' | 'partial' fields as well
+            //todo implement proper merging, at sub field levels as well
+            conn.presence = { ...conn.presence, ...parsedData.data };
 
-          console.log(`sending an update or no?`);
-          //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
-          this.party.broadcast(
-            JSON.stringify(MessageBuilder.presenceUpdate(conn)),
-            [conn.id]
-          );
-          break;
-        }
-
-        case InternalEvents.BROADCAST: {
-          if (!this.validateBroadcast(conn, parsedData.data)) return;
-
-          console.log(`broadcastig`);
-          this.party.broadcast(
-            JSON.stringify(
-              MessageBuilder.broadcastEvent(conn, parsedData.data)
-            ),
-            [conn.id]
-          );
-          break;
-        }
-
-        default: {
-          //now check for internal custom events
-
-          const eventHandler = this._customEvents[parsedData.event];
-
-          if (eventHandler) {
-            try {
-              const { validator, handler } = eventHandler;
-              if (typeof validator === "function") {
-                //? maybe we're expecting it to throw, or return false
-                validator(parsedData.data);
-              }
-
-              //? here also if throws we can handle maybe based on event & rid
-              //?ok definitely makes sense to throw an error a default one & perhaps a custom one
-              handler(
-                {
-                  data: parsedData.data,
-                  rid: parsedData.rid,
-                  event: parsedData.event,
-                },
-                conn
-              );
-
-              return;
-            } catch (error) {
-              //this should be safe, and should not throw any error, otherwise bad bad bad!
-              this.catchAll(error, parsedData, conn);
-
-              return;
-            }
+            console.log(`sending an update or no?`);
+            //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
+            this.party.broadcast(
+              JSON.stringify(MessageBuilder.presenceUpdate(conn)),
+              [conn.id]
+            );
+            break;
           }
 
-          this.notFound(parsedData, conn);
-          console.log("unknown event");
-          console.log(parsedData);
+          case InternalEvents.BROADCAST: {
+            if (!this.validateBroadcast(conn, parsedData.data)) return;
+
+            console.log(`broadcastig`);
+            this.party.broadcast(
+              JSON.stringify(
+                MessageBuilder.broadcastEvent(conn, parsedData.data)
+              ),
+              [conn.id]
+            );
+            break;
+          }
+
+          default: {
+            //now check for internal custom events
+
+            const eventHandler = this._customEvents[parsedData.event];
+
+            if (eventHandler) {
+              try {
+                const { validator, handler } = eventHandler;
+                if (typeof validator === "function") {
+                  //? maybe we're expecting it to throw, or return false
+                  validator(parsedData.data);
+                }
+
+                //? here also if throws we can handle maybe based on event & rid
+                //?ok definitely makes sense to throw an error a default one & perhaps a custom one
+                handler(
+                  {
+                    data: parsedData.data,
+                    rid: parsedData.rid,
+                    event: parsedData.event,
+                  },
+                  conn
+                );
+
+                return;
+              } catch (error) {
+                //this should be safe, and should not throw any error, otherwise bad bad bad!
+                this.catchAll(error, parsedData, conn);
+
+                return;
+              }
+            }
+
+            this.notFound(parsedData, conn);
+            console.log("unknown event");
+            console.log(parsedData);
+          }
         }
       }
     } catch (error) {}
