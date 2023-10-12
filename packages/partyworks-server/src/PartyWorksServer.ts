@@ -87,6 +87,8 @@ export abstract class PartyWorks<
       }
       switch (parsedData.event) {
         case InternalEvents.PRESENSE_UPDATE: {
+          if (!this.validatePresence(conn, parsedData.data)) return;
+
           //todo listen for type 'set' | 'partial' fields as well
           //todo implement proper merging, at sub field levels as well
           conn.presence = { ...conn.presence, ...parsedData.data };
@@ -333,9 +335,20 @@ export abstract class PartyWorks<
   //send the event that you want to send on connect here
   sendEventOnConnect(player: Player<TState, TEventEmitters>) {}
 
+  //let's you check for and validate the presenceUpdates for a user
+  //you should never throw an error in this one, return a booolean to indicate if this should fail or not fail
+  validatePresence(
+    player: Player<TState, TEventEmitters, TPresence>,
+    data: any
+  ): boolean {
+    return true;
+  }
+
+  //these are run in the constructor, for those who don't wanna do the constructor super thing in child class
   setup() {}
   setCustomEvent() {}
 
+  //sets the custom events
   customEvents(data: CustomEvents<TEventsListener, TState>) {
     this._customEvents = data;
   }
