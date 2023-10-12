@@ -36,13 +36,27 @@ export class ImmutablePeers<TPresence, TUserMeta> {
   }
 
   //for now we're just only updating the peer presence
-  updatePeer(peerId: string, presence: TPresence) {
+  updatePeer(
+    peerId: string,
+    { presence, info }: { presence?: TPresence; info?: TUserMeta }
+  ) {
     const peer = this._connectedPeers.get(peerId);
 
     //well this should always be the case :/
     if (peer) {
       this.invalidateCache();
-      this._connectedPeers.set(peerId, Object.freeze({ ...peer, presence }));
+
+      const updatedPeer = { ...peer };
+
+      if (presence !== undefined) {
+        updatedPeer.presence = presence;
+      }
+
+      if (info !== undefined) {
+        updatedPeer.info = info;
+      }
+
+      this._connectedPeers.set(peerId, Object.freeze(updatedPeer));
     }
   }
 

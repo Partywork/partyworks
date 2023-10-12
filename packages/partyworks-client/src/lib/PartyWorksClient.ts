@@ -55,6 +55,10 @@ type InternalEventsMap =
       data: { userId: string; data: any };
     }
   | {
+      event: InternalEvents.USERMETA_UPDATE;
+      data: { userId: string; data: any };
+    }
+  | {
       event: InternalEvents.BROADCAST;
       data: { data: any; userId: string };
     };
@@ -239,10 +243,33 @@ export class PartyWorksRoom<
             }
 
             case InternalEvents.PRESENSE_UPDATE: {
-              this._peers.updatePeer(data.data.userId, data.data.data);
-              console.log(`presence other notifie`);
+              if (data.data.userId === this._self?.current.data.id) {
+                this._self.partialSet("presence", data.data.data);
+                this.eventHub.self.notify({});
+
+                return;
+              }
+
+              this._peers.updatePeer(data.data.userId, {
+                presence: data.data.data,
+              });
               this.eventHub.others.notify({});
               // this.emit("peersUpdate", {});
+              break;
+            }
+
+            case InternalEvents.USERMETA_UPDATE: {
+              if (data.data.userId === this._self?.current.data.id) {
+                this._self.partialSet("info", data.data.data);
+                this.eventHub.self.notify({});
+                return;
+              }
+
+              this._peers.updatePeer(data.data.userId, {
+                info: data.data.data,
+              });
+              this.eventHub.others.notify({});
+
               break;
             }
 

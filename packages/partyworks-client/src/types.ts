@@ -17,6 +17,7 @@ export enum InternalEvents {
 
   //* User
   PRESENSE_UPDATE = 300, //when a user sends a presense update event
+  USERMETA_UPDATE = 301, //when the server updates a user's meta
 }
 
 export interface BaseUser {
