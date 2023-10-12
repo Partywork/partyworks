@@ -12,6 +12,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react",
+    "declaration": true,
     "paths": {
       "@/*": ["./src/*"]
     }
