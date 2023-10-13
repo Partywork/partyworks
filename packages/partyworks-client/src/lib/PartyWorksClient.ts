@@ -154,6 +154,8 @@ export class PartyWorksRoom<
     >; //this is for broadcast api
     error: SingleEventSource<{ error: any; event?: string }>; //this is for event & non event based errors
   };
+  //? wait can't i make it a single event source
+  ridListeners = new SingleEventSource<Readonly<TEvents[keyof TEvents]>>(); //another EventSource just for ridListeners
 
   constructor(options: PartySocketOptions) {
     super();
@@ -208,7 +210,8 @@ export class PartyWorksRoom<
         if (
           !parsedData ||
           (typeof parsedData.event === "undefined" &&
-            typeof parsedData.error === "undefined")
+            typeof parsedData.error === "undefined" &&
+            typeof parsedData.rid === "undefined")
         ) {
           //   this should never happen
           console.error(`No event field in the response from websocket`);
@@ -372,29 +375,55 @@ export class PartyWorksRoom<
 
         //? should be provide it as onError on room ?
         //? .onError("error", () => {})
-        if (parsedData.error && !parsedData.rid) {
-          this.eventHub.error.notify(parsedData);
-          return;
-        } else if (parsedData.error && parsedData.event && parsedData.rid) {
-          // ? ok so how do we identify, normal .on from .on of emit await?
-          //todo diff between, normal .on vas .on for emitAwait. so we don't notify other .on for same event in case of errors
-          //todo right now users well have to add a guard, which is not ideal :(  ;
-          //? huh dunno really, what are the chances :/ minimal
 
-          //-_- it's doing the same thing as below
-          for (let cb of this.events[parsedData.event]) {
-            cb.exec(parsedData);
+        //ok new logic let's diff events & errors
+        if (parsedData.error) {
+          if (parsedData.rid) {
+            if (parsedData.options?.sendToAllListeners) {
+              //here broadcast to everyone and also broadcast to rid listeners
+
+              this.ridListeners.notify(parsedData);
+              this.eventHub.error.notify(parsedData);
+            } else {
+              //only broadcast to rid listeners
+
+              this.ridListeners.notify(parsedData);
+            }
+          } else {
+            //no rid broadcast to everyone except ridListeners, a normal es event
+            this.eventHub.error.notify(parsedData);
           }
 
           return;
         }
 
-        if (!this.events[parsedData.event]) {
-          return;
-        }
+        //now we're here that means this is not an error for sure
+        if (parsedData.rid) {
+          if (parsedData.options?.sendToAllListeners) {
+            //here do the exec to everyone.
+            //including the rid listerners
+            this.ridListeners.notify(parsedData);
 
-        for (let cb of this.events[parsedData.event]) {
-          cb.exec(parsedData);
+            if (!this.events[parsedData.event]) {
+              return;
+            }
+
+            for (let cb of this.events[parsedData.event]) {
+              cb.exec(parsedData.data);
+            }
+          } else {
+            //only broadcast to the rid listeners
+            this.ridListeners.notify(parsedData);
+          }
+        } else {
+          //this is a normal message just do a normal exec
+          if (!this.events[parsedData.event]) {
+            return;
+          }
+
+          for (let cb of this.events[parsedData.event]) {
+            cb.exec(parsedData.data);
+          }
         }
       } catch (error) {
         //notify when data is not parsable
@@ -473,9 +502,10 @@ export class PartyWorksRoom<
     return new Promise((resolve, reject) => {
       const requestId = uuid();
 
+      //todo we can use this to make sure event prop exist on response, else ignore
       const listenEvent = (options?.listenEvent || event) as keyof TEvents;
-      //todo maybe it makes more sense to listen for allMessages, it'll allow to not depend on a particular event, but only on rid
-      const functionId = this.on(listenEvent, (data) => {
+
+      const unsub = this.ridListeners.subscribe((data) => {
         const responseId = data.rid;
 
         if (!responseId || responseId !== requestId) return;
@@ -483,12 +513,12 @@ export class PartyWorksRoom<
         if (data.error) reject(data.error);
 
         clearTimeout(timeout);
-        this.off(listenEvent, functionId);
+        unsub();
         resolve(data.data);
       });
 
       const timeout = setTimeout(() => {
-        this.off(listenEvent, functionId);
+        unsub();
         reject(`no message recieved`);
       }, 5000);
 
@@ -501,7 +531,7 @@ export class PartyWorksRoom<
         console.log(`[ Sent ${event as string} ]`);
       } catch (error) {
         clearTimeout(timeout);
-        this.off(listenEvent, functionId);
+        unsub();
         reject(error);
       }
     });
@@ -518,7 +548,6 @@ export class PartyWorksRoom<
   //this should make up to be the individual es
   //a single subscribe is beeter than
   //todo add a single subscribe for javascript folks
-
   subscribe<
     K extends keyof RoomEventSubscriberMap<
       TPresence,
