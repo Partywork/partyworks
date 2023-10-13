@@ -10,6 +10,7 @@ import {
 } from "./EventSource";
 import { InternalEvents, type BaseUser } from "../types";
 import { v4 as uuid } from "uuid";
+import { MessageBuilder } from "./MessageBuilder";
 
 type EmitAwaiOptions = {
   listenEvent?: string;
@@ -420,11 +421,7 @@ export class PartyWorksRoom<
       this.eventHub.self.notify(this._self.current!);
       this._partySocket.send(
         JSON.stringify(
-          {
-            event: InternalEvents.PRESENSE_UPDATE,
-            data: { data, type },
-            _pwf: "-1",
-          },
+          MessageBuilder.updatePresenceMessage({ data, type }),
           (k, v) => (v === undefined ? null : v) //we replace undefined with null, since stringify removes undefined props
         )
       );
@@ -435,16 +432,12 @@ export class PartyWorksRoom<
 
   broadcast = (data: TBroadcastEvent) => {
     this._partySocket.send(
-      JSON.stringify({ event: InternalEvents.BROADCAST, data, _pwf: "-1" })
+      JSON.stringify(MessageBuilder.broadcastMessage(data))
     );
   };
 
   emit<K extends keyof TEventsEmit>(event: K, data: TEventsEmit[K]): void {
-    const dataToSend = JSON.stringify({
-      event,
-      data,
-      _pwf: "-1",
-    });
+    const dataToSend = JSON.stringify(MessageBuilder.emitMessage(event, data));
     this._partySocket.send(dataToSend);
   }
 
@@ -500,14 +493,9 @@ export class PartyWorksRoom<
       }, 5000);
 
       try {
-        const stringifiedObjectResponse = JSON.stringify({
-          data: {
-            ...data,
-          },
-          event,
-          rid: requestId,
-          _pwf: "-1",
-        });
+        const stringifiedObjectResponse = JSON.stringify(
+          MessageBuilder.emitAwaitMessage({ event, data, rid: requestId })
+        );
 
         this._partySocket.send(stringifiedObjectResponse);
         console.log(`[ Sent ${event as string} ]`);
