@@ -77,6 +77,16 @@ export abstract class PartyWorks<
   //*-----------------------------------
   //* Private Internal Methods, internal lib methods
   //*-----------------------------------
+
+  //checks the correct data format
+  //well may not be neccessare since the user can check, still
+  private _validatePresenceMessage(data: any) {
+    if (!data || !data.type || (data.type !== "partial" && data.type !== "set"))
+      return false;
+
+    return true;
+  }
+
   private handleEvents(e: MessageEvent, conn: Player) {
     try {
       const parsedData = JSON.parse(e.data as string);
@@ -86,11 +96,16 @@ export abstract class PartyWorks<
       if (parsedData.event && parsedData._pwf === "-1") {
         switch (parsedData.event) {
           case InternalEvents.PRESENSE_UPDATE: {
+            if (!this._validatePresenceMessage(parsedData.data)) return;
             if (!this.validatePresence(conn, parsedData.data)) return;
 
-            //todo listen for type 'set' | 'partial' fields as well
-            //todo implement proper merging, at sub field levels as well
-            conn.presence = { ...conn.presence, ...parsedData.data };
+            if (parsedData.data.type === "set") {
+              conn.presence = parsedData.data.data;
+            } else if (parsedData.data.data) {
+              //todo listen for type 'set' | 'partial' fields as well
+              //todo implement proper merging, at sub field levels as well
+              conn.presence = { ...conn.presence, ...parsedData.data.data };
+            }
 
             console.log(`sending an update or no?`);
             //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
@@ -341,7 +356,7 @@ export abstract class PartyWorks<
   //you should never throw an error in this one, return a booolean to indicate if this should fail or not fail
   validatePresence(
     player: Player<TState, TEventEmitters, TPresence>,
-    data: any
+    data: any //ideally should be {type: "partial" | "set",  data: TPresence | Partial<TPresence>}
   ): boolean {
     return true;
   }
