@@ -255,6 +255,25 @@ export abstract class PartyWorks<
     }
   }
 
+  //? sendAwait function :/ . huh dunno how we can do anything bout this one
+  //todo allow to send eventless messages, since rid is the king, eventListerers will be based on rids for emitAwait rid events
+  //huh so we want eventless messages, umm, what should be do about the typescript then
+  sendAwait<K extends keyof TEventEmitters>(
+    connection: Party.Connection,
+    data:
+      | { rid: string; event: K; data: TEventEmitters[K] }
+      | { rid: string; data?: any; [key: string]: any },
+    options?: {
+      sendToAllListeners?: boolean; //if true emitted to all listeners listening for that event, not limited to rid event listeners
+    }
+  ) {
+    try {
+      const stringifiedData = JSON.stringify({ ...data, options });
+
+      connection.send(stringifiedData);
+    } catch (error) {}
+  }
+
   //this sends a client recognized error, event prop is optional
   //event will help in easy error association, or can be used as custom tags on error
   protected sendError<
@@ -262,10 +281,13 @@ export abstract class PartyWorks<
     K extends keyof TEventEmitters
   >(
     connection: Party.Connection,
-    data: { error: any; event?: string | K | T; rid?: string }
+    data: { error: any; event?: string | K | T; rid?: string },
+    options?: {
+      sendToAllListeners?: boolean; //if true emitted to all listeners listening for that event, not limited to rid event listeners
+    }
   ): void {
     try {
-      const stringifiedData = JSON.stringify(data);
+      const stringifiedData = JSON.stringify({ ...data, options });
 
       connection.send(stringifiedData);
     } catch (error) {
