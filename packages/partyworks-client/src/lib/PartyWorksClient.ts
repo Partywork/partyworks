@@ -409,6 +409,7 @@ export class PartyWorksRoom<
     //todo make sure the self is always there? for presence updates locally.
     //it can be left in a non ack state, where we don't consider it acked yet
     //ok anyways revise this
+
     if (this._self) {
       if (type === "partial") {
         this._self?.partialSet("presence", data);
@@ -418,11 +419,14 @@ export class PartyWorksRoom<
       this.eventHub.myPresence.notify(this._self?.current.presence!);
       this.eventHub.self.notify(this._self.current!);
       this._partySocket.send(
-        JSON.stringify({
-          event: InternalEvents.PRESENSE_UPDATE,
-          data,
-          _pwf: "-1",
-        })
+        JSON.stringify(
+          {
+            event: InternalEvents.PRESENSE_UPDATE,
+            data: { data, type },
+            _pwf: "-1",
+          },
+          (k, v) => (v === undefined ? null : v) //we replace undefined with null, since stringify removes undefined props
+        )
       );
     }
 
