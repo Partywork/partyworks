@@ -33,7 +33,7 @@ export class SingleEventSource<T> {
 
 //ok during development is somehow shrunk into just a listener, lol sorry you were supposed to be fairly big,
 //pub/sub features. basic ones are, emit, on & off.     others are not necessary idk :/ maybe emitAWAIT can still come in handy dunno :/
-export abstract class PartyWorksEventSource<T extends Record<string, object>> {
+export class PartyWorksEventSource<T extends Record<string, object>> {
   protected events: EventsMap<T> = {} as EventsMap<T>;
 
   on<K extends keyof T, V extends T[K]>(
