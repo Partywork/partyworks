@@ -40,7 +40,7 @@ export class StopRetry extends Error {
   }
 }
 
-type ConnState =
+export type PartySocketConnectionState =
   | "initial"
   | "auth"
   | "authError"
@@ -49,34 +49,35 @@ type ConnState =
   | "connected"
   | "failed";
 
+export type PartySocketStatus =
+  | "initial"
+  | "disconnected"
+  | "closed"
+  | "connecting"
+  | "reconnecting"
+  | "connected";
+
 //i wonder if cell status is even necessary, i don't see using them or notifying bout them :/
 //block statuses are only one that're meaningful and necessary
 //cell status hmm...
 
 export class PartySocket {
   private status: "started" | "not_started" = "not_started";
-  private stateBlock:
-    | "initial"
-    | "auth"
-    | "authError"
-    | "connection"
-    | "connectionError"
-    | "connected"
-    | "failed" = "initial";
+  private stateBlock: PartySocketConnectionState = "initial";
   private socket: WebSocket | null = null;
   private connRetry: number = 0;
   private authRetry: number = 0;
   private counter = 0;
   public eventHub: {
     messages: SingleEventSource<MessageEvent<any>>;
-    status: SingleEventSource<ConnState>; //will update the status of the machine, maybe reqires a helper to get useful states
+    status: SingleEventSource<PartySocketConnectionState>; //will update the status of the machine, maybe reqires a helper to get useful states
   };
 
   //?do we create a message buffer, before resolving the connection, if we give that config option pauseMessageBeforeConnect or something
   constructor(private options: PartySocketOptions) {
     this.eventHub = {
       messages: new SingleEventSource<MessageEvent<any>>(),
-      status: new SingleEventSource<ConnState>(),
+      status: new SingleEventSource<PartySocketConnectionState>(),
     };
 
     options.config = { ...this.getDefaultSocketConfig(), ...options.config };
@@ -690,7 +691,7 @@ export class PartySocket {
     this.closeSocket();
   }
 
-  public getStatus = () => {
+  public getStatus = (): PartySocketStatus => {
     switch (this.stateBlock) {
       case "auth":
       case "authError":
@@ -706,7 +707,10 @@ export class PartySocket {
         return this.counter > 0 ? "closed" : "initial";
 
       default:
-        console.error(`hmm, invalid state, should never happen`);
+        throw new Error(
+          `invalid state, this will never happen`,
+          this.stateBlock
+        );
     }
   };
 
