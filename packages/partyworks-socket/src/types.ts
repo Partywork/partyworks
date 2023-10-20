@@ -72,7 +72,7 @@ export interface SocketConfig {
  * Configuration options for connecting to a room.
  * @interface
  */
-export interface ConnOptions {
+export interface PartySocketOptions {
   /**
    * A boolean indicating whether to wait for the room to become available.
    * @type {boolean}

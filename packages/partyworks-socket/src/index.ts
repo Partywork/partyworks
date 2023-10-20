@@ -1,2 +1,2 @@
 export { PartySocket, StopRetry } from "./PartySocket";
-export type { ConnOptions, SocketConfig } from "./types";
+export type { PartySocketOptions, SocketConfig } from "./types";

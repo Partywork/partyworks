@@ -1,15 +1,15 @@
 import { SingleEventSource } from "./EventSource";
 import {
   DEFAULT_AUTH_TIMEOUT,
-  type ConnOptions,
   DEFAULT_SOCKET_CONNECT_TIMEOUT,
   DEFAULT_HEARTBEAT_INTERVAL,
   DEFAULT_CONNECTION_BACKOFF,
   DEFAULT_AUTH_BACKOFF,
   DEFAULT_MAX_CONN_TRIES,
   DEFAULT_MAX_AUTH_TRIES,
-  type SocketConfig,
   LogLevel,
+  type SocketConfig,
+  type PartySocketOptions,
 } from "./types";
 import { awaitPromise, generateUUID } from "./utils";
 
@@ -66,15 +66,14 @@ export class PartySocket {
   private socket: WebSocket | null = null;
   private connRetry: number = 0;
   private authRetry: number = 0;
-  eventHub: {
+  private counter = 0;
+  public eventHub: {
     messages: SingleEventSource<MessageEvent<any>>;
     status: SingleEventSource<ConnState>; //will update the status of the machine, maybe reqires a helper to get useful states
   };
-  private counter = 0;
 
   //?do we create a message buffer, before resolving the connection, if we give that config option pauseMessageBeforeConnect or something
-
-  constructor(private options: ConnOptions) {
+  constructor(private options: PartySocketOptions) {
     this.eventHub = {
       messages: new SingleEventSource<MessageEvent<any>>(),
       status: new SingleEventSource<ConnState>(),
@@ -85,6 +84,17 @@ export class PartySocket {
     if (!options.userId) {
       options.userId = generateUUID();
     }
+  }
+
+  //todo maybe let ids be dynamic as well
+  //todo? add/update _pkurl & id  anytime buuildUrl is called :/
+  get id() {
+    return this.options.userId!;
+  }
+
+  //maybe a better name would be running/
+  get started() {
+    return this.status === "started";
   }
 
   private getDefaultSocketConfig(): SocketConfig {
