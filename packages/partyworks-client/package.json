@@ -36,6 +36,8 @@
     "@types/uuid": "^9.0.5"
   },
   "dependencies": {
+    "partyworks-shared": "^0.0.0",
+    "partyworks-socket": "^0.0.0",
     "uuid": "^9.0.1"
   }
 }

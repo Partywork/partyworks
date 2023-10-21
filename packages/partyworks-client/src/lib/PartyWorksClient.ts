@@ -1,14 +1,20 @@
-import type { PartySocketOptions } from "../partysocket";
-import PartySocket from "../partysocket";
+import type {
+  PartySocketConnectionState,
+  PartySocketOptions,
+  PartySocketStatus,
+} from "partyworks-socket";
+import { PartySocket } from "partyworks-socket";
+import {
+  SingleEventSource,
+  type UnsubscribeListener,
+  PartyworksEvents,
+} from "partyworks-shared";
+
 import { ImmutableObject } from "../immutables/ImmutableObject";
 import type { Peer, Self } from "../types";
 import { ImmutablePeers } from "../immutables/ImmutableOthers";
-import {
-  PartyWorksEventSource,
-  SingleEventSource,
-  type UnsubscribeListener,
-} from "./EventSource";
-import { InternalEvents, type BaseUser } from "../types";
+
+import { PartyWorksEventSource } from "./EventSource";
 import { v4 as uuid } from "uuid";
 import { MessageBuilder } from "./MessageBuilder";
 
@@ -56,16 +62,18 @@ type RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent> = {
   >;
   //todo improve on typescript, atleast the ability to add a generic and override the values should be there
   error: Subscribe<{ error: any; event?: string }>;
+
+  status: Subscribe<PartySocketStatus>;
 };
 
 //i think for the internal events we can have rpc based format, but custom events can be tricky the ones that don't follow req/res format
-type InternalEventsMap =
+type PartyworksEventsMap =
   | {
-      event: InternalEvents.CONNECT;
+      event: PartyworksEvents.CONNECT;
       data: { id: string };
     }
   | {
-      event: InternalEvents.ROOM_STATE;
+      event: PartyworksEvents.ROOM_STATE;
       data: {
         self: {
           info: any; //this is TUserMeta
@@ -75,20 +83,20 @@ type InternalEventsMap =
       };
     }
   | {
-      event: InternalEvents.USER_JOINED;
+      event: PartyworksEvents.USER_JOINED;
       data: { userId: string; info: any; presence: any };
     }
-  | { event: InternalEvents.USER_LEFT; data: { userId: string } }
+  | { event: PartyworksEvents.USER_LEFT; data: { userId: string } }
   | {
-      event: InternalEvents.PRESENSE_UPDATE;
+      event: PartyworksEvents.PRESENSE_UPDATE;
       data: { userId: string; data: any };
     }
   | {
-      event: InternalEvents.USERMETA_UPDATE;
+      event: PartyworksEvents.USERMETA_UPDATE;
       data: { userId: string; data: any };
     }
   | {
-      event: InternalEvents.BROADCAST;
+      event: PartyworksEvents.BROADCAST;
       data: { data: any; userId: string };
     };
 
@@ -140,6 +148,7 @@ export class PartyWorksRoom<
   _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
   _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
   _peers: ImmutablePeers<TPresence, TUserMeta>;
+  _lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
   eventHub: {
     allMessages: SingleEventSource<MessageEvent<any>>; //for all the messages, servers as socket.addEventlistener("message")
     message: SingleEventSource<MessageEvent<any>>; //for all but internal messages, internal ones will be ignored, most likely user's use this one
@@ -153,19 +162,22 @@ export class PartyWorksRoom<
       RoomBroadcastEventListener<TPresence, TUserMeta, TBroadcastEvent>
     >; //this is for broadcast api
     error: SingleEventSource<{ error: any; event?: string }>; //this is for event & non event based errors
+    status: SingleEventSource<PartySocketConnectionState>;
   };
   //? wait can't i make it a single event source
   ridListeners = new SingleEventSource<Readonly<TEvents[keyof TEvents]>>(); //another EventSource just for ridListeners
 
-  constructor(options: PartySocketOptions) {
+  constructor(
+    options: PartySocketOptions & Partial<{ lostConnectionTimeout: number }>
+  ) {
     super();
 
     //we will start closed
     this._partySocket = new PartySocket({
       ...options,
-      minUptime: 0,
-      startClosed: true,
     });
+
+    this._partySocket.eventHub.status.subscribe(this.handleLostConnection);
 
     this.eventHub = {
       allMessages: new SingleEventSource(),
@@ -175,16 +187,21 @@ export class PartyWorksRoom<
       myPresence: new SingleEventSource(),
       event: new SingleEventSource(),
       error: new SingleEventSource(),
+      status: this._partySocket.eventHub.status,
     };
     this._message();
     this._peers = new ImmutablePeers();
   }
 
   connect() {
-    this._partySocket.reconnect();
+    if (!this._partySocket.started) {
+      this._partySocket.start();
+    } else {
+      this._partySocket.reconnect();
+    }
     //TODO implement a proper connection state, and use it for tracking states &  bufffering
-    this._partySocket.eventSource.subscribe((status) => {
-      console.log(`socket status ${status}`);
+    this._partySocket.eventHub.status.subscribe((status) => {
+      console.log(`socket status ${this._partySocket.getStatus()} [${status}]`);
     });
   }
 
@@ -198,7 +215,7 @@ export class PartyWorksRoom<
     // const emit = this.emit as PartyWorksClient<InternalListenersMap>["emit"];
 
     this.on(InternalListeners.Message, (data) => {});
-    this._partySocket.addEventListener("message", (e) => {
+    this._partySocket.eventHub.messages.subscribe((e) => {
       //this handler is always called, as it is a basic all message event handler
       // this.emit(InternalListeners.Message, e);
 
@@ -224,30 +241,23 @@ export class PartyWorksRoom<
 
         //these are internal events
         if (
-          Object.values(InternalEvents).includes(
-            parsedData.event as InternalEvents
+          Object.values(PartyworksEvents).includes(
+            parsedData.event as PartyworksEvents
           ) &&
           //internal flag checker, used to track internal messages
           parsedData._pwf === "-1"
         ) {
-          const data = parsedData as InternalEventsMap;
+          const data = parsedData as PartyworksEventsMap;
 
           switch (data.event) {
-            // case InternalEvents.CONNECT: {
-            //   this._self = { userId: data.data.id, presence: undefined };
-            //   // this.emit("selfUpdate", {});
-
-            //   break;
-            // }
-
             //ok so initially i was going with two events connenct & room_state. (this is the same setup for funrooms)
             //but for ease and simplicity that'll be the same message now
-            case InternalEvents.ROOM_STATE: {
+            case PartyworksEvents.ROOM_STATE: {
               this._loaded = true;
               this._self = new ImmutableObject<Self>({
                 data: {
                   id: this._partySocket.id,
-                  _pkUrl: this._partySocket._pkurl,
+                  // _pkUrl: this._partySocket._pkurl,
                 },
                 info: data.data.self.info, //this is provided by the user on backend
                 presence: undefined,
@@ -266,7 +276,7 @@ export class PartyWorksRoom<
               break;
             }
 
-            case InternalEvents.USER_JOINED: {
+            case PartyworksEvents.USER_JOINED: {
               const peer = this._peers.addPeer(data.data as any);
 
               this.eventHub.others.notify({
@@ -277,7 +287,7 @@ export class PartyWorksRoom<
               break;
             }
 
-            case InternalEvents.USER_LEFT: {
+            case PartyworksEvents.USER_LEFT: {
               const peer = this._peers.disconnectPeer(data.data.userId);
 
               if (peer) {
@@ -291,7 +301,7 @@ export class PartyWorksRoom<
               break;
             }
 
-            case InternalEvents.PRESENSE_UPDATE: {
+            case PartyworksEvents.PRESENSE_UPDATE: {
               if (data.data.userId === this._self?.current.data.id) {
                 this._self.partialSet("presence", data.data.data);
                 this.eventHub.self.notify(this._self.current);
@@ -316,7 +326,7 @@ export class PartyWorksRoom<
               break;
             }
 
-            case InternalEvents.USERMETA_UPDATE: {
+            case PartyworksEvents.USERMETA_UPDATE: {
               if (data.data.userId === this._self?.current.data.id) {
                 this._self.partialSet("info", data.data.data);
                 this.eventHub.self.notify(this._self.current);
@@ -339,7 +349,7 @@ export class PartyWorksRoom<
               break;
             }
 
-            case InternalEvents.BROADCAST: {
+            case PartyworksEvents.BROADCAST: {
               this.eventHub.event.notify({
                 data: data.data.data,
                 userId: data.data.userId,
@@ -537,12 +547,22 @@ export class PartyWorksRoom<
     });
   }
 
+  //todo
+  handleLostConnection = () => {
+    //we don't care for initial &
+    const status = this._partySocket.getStatus();
+  };
+
   getOthers = (): Peer<TPresence, TUserMeta>[] => {
     return this._peers.current;
   };
 
   getPresence = (): TPresence | undefined => {
     return this._self?.current.presence;
+  };
+
+  getStatus = () => {
+    return this._partySocket.getStatus();
   };
 
   //this should make up to be the individual es
@@ -592,6 +612,9 @@ export class PartyWorksRoom<
       case "self": {
         return this.eventHub.self.subscribe(callback as any);
       }
+
+      case "status":
+        return this.eventHub.status.subscribe(callback as any);
 
       default: {
         //? should we throw
