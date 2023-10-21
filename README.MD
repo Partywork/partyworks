@@ -3,7 +3,7 @@
 - docs coming soon
 - Everythings better with friends✨
 
-> **Note**: Partyworks is in Dev. Get access to Partyworks Cloud via the [waitlist](https://tally.so/r/n9q1Rp)
+> **Note**: Partyworks is in Dev.
 
 Current status:
 
