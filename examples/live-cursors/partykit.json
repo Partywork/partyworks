@@ -1,0 +1,5 @@
+{
+  "name": "partyworks-cursor-example",
+  "main": "party/index.ts",
+  "port": 1999
+}
