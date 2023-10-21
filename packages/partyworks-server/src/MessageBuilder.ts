@@ -1,10 +1,11 @@
-import { InternalEvents, Player } from "./types";
+import { PartyworksEvents } from "partyworks-shared";
+import { Player } from "./types";
 import type * as Party from "partykit/server";
 
 export class MessageBuilder {
   static connect(player: Player, data: any) {
     return {
-      event: InternalEvents.CONNECT,
+      event: PartyworksEvents.CONNECT,
       data,
     };
   }
@@ -21,7 +22,7 @@ export class MessageBuilder {
     roomData: any;
   }) {
     return {
-      event: InternalEvents.ROOM_STATE,
+      event: PartyworksEvents.ROOM_STATE,
       data: {
         self: {
           data: {
@@ -43,7 +44,7 @@ export class MessageBuilder {
 
   static userOnline(player: Player) {
     return {
-      event: InternalEvents.USER_JOINED,
+      event: PartyworksEvents.USER_JOINED,
       data: {
         userId: player.id,
         presence: player.presence,
@@ -55,7 +56,7 @@ export class MessageBuilder {
 
   static userOffline(player: Party.Connection) {
     return {
-      event: InternalEvents.USER_LEFT,
+      event: PartyworksEvents.USER_LEFT,
       data: {
         userId: player.id,
       },
@@ -65,7 +66,7 @@ export class MessageBuilder {
 
   static presenceUpdate(player: Player) {
     return {
-      event: InternalEvents.PRESENSE_UPDATE,
+      event: PartyworksEvents.PRESENSE_UPDATE,
       data: {
         userId: player.id,
         data: player.presence,
@@ -76,7 +77,7 @@ export class MessageBuilder {
 
   static metaUpdate(player: Player) {
     return {
-      event: InternalEvents.USERMETA_UPDATE,
+      event: PartyworksEvents.USERMETA_UPDATE,
       data: {
         userId: player.id,
         data: player.state?.info,
@@ -87,7 +88,7 @@ export class MessageBuilder {
 
   static broadcastEvent(player: Player, data: any) {
     return {
-      event: InternalEvents.BROADCAST,
+      event: PartyworksEvents.BROADCAST,
       data: {
         userId: player.id,
         data,

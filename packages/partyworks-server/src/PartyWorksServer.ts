@@ -1,5 +1,6 @@
 import type * as Party from "partykit/server";
-import { InternalEvents, Player } from "./types";
+import { PartyworksEvents } from "partyworks-shared";
+import { Player } from "./types";
 import { MessageBuilder } from "./MessageBuilder";
 import { MessageEvent } from "@cloudflare/workers-types";
 
@@ -95,7 +96,7 @@ export abstract class PartyWorks<
       //todo ok here internal events also mean custom events sent by user via the client's emit or emitAwait
       if (parsedData.event && parsedData._pwf === "-1") {
         switch (parsedData.event) {
-          case InternalEvents.PRESENSE_UPDATE: {
+          case PartyworksEvents.PRESENSE_UPDATE: {
             if (!this._validatePresenceMessage(parsedData.data)) return;
             if (!this.validatePresence(conn, parsedData.data)) return;
 
@@ -116,7 +117,7 @@ export abstract class PartyWorks<
             break;
           }
 
-          case InternalEvents.BROADCAST: {
+          case PartyworksEvents.BROADCAST: {
             if (!this.validateBroadcast(conn, parsedData.data)) return;
 
             console.log(`broadcastig`);

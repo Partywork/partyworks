@@ -23,7 +23,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20231002.0"
+    "@cloudflare/workers-types": "^4.20231002.0",
+    "partyworks-shared": "^0.0.0"
   },
   "peerDependencies": {
     "partykit": "^0.0.29"
