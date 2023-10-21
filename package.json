@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "start": "npm start -w partyworks-server",
-    "dev": "concurrently \"npm run dev -w partyworks-server\" \"npm run dev -w partyworks-socket\" \"npm run dev -w partyworks-client\" \"npm run dev -w partyworks-react\"  ",
+    "dev": "concurrently \"npm run dev -w partyworks-server\" \"npm run dev -w partyworks-shared\" \"npm run dev -w partyworks-socket\" \"npm run dev -w partyworks-client\" \"npm run dev -w partyworks-react\"  ",
     "example": "npm run dev -w test"
   },
   "keywords": [
