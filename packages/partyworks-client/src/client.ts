@@ -1,3 +1,4 @@
+import type { PartySocketOptions } from "partyworks-socket";
 import { PartyWorksRoom } from "./lib/PartyWorksClient";
 
 //* THIS IS CLIENT
@@ -23,7 +24,9 @@ export interface PartyClient {
 }
 
 //but here also we need to provide a way to manuaaly connect
-export const createClient = ({ host }: { host: string }): PartyClient => {
+export const createClient = ({
+  host,
+}: Omit<PartySocketOptions, "room">): PartyClient => {
   //i guess this is for future multirom support
   const rooms = new Map<string, PartyWorksRoom<any>>();
 
