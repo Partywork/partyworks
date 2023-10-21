@@ -22,6 +22,7 @@ import { useSyncExternalStoreWithSelector } from "use-sync-external-store/shim/w
 //* [createRoomContext, RoomProvider, useRoom, useStatus]
 //* [useMyPresence, useUpdateMyPresence, useSelf, useOthers, useOthersMapped, useOthersConnectionIds, useOther]
 //* [useBroadcastEvent, useEventListener]
+//* [useStatus]
 //* custom events endpoint
 
 interface RoomProviderProps {
@@ -248,6 +249,16 @@ export function createRoomContext<
     }, [room]);
   }
 
+  function useStatus() {
+    const room = useRoom();
+
+    const sub = room.eventHub.status.subscribe;
+    const snap = room.getStatus;
+
+    //? should we add a selector,
+    return useSyncExternalStore(sub, snap, snap);
+  }
+
   function useMessage(listener: (data: MessageEvent<any>) => void) {
     const room = useRoom();
     const savedRef = useRef(listener);
@@ -338,5 +349,6 @@ export function createRoomContext<
     useMessage,
     useAllMessage, //WELL JUST PROVIDING IT :/
     useError,
+    useStatus,
   };
 }
