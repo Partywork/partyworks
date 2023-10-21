@@ -1,5 +1,0 @@
-{
-  "name": "partyworks-example",
-  "main": "party/src/index.ts",
-  "port": 1999
-}
