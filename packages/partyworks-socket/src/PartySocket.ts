@@ -1,4 +1,4 @@
-import { SingleEventSource } from "./EventSource";
+import { SingleEventSource } from "partyworks-shared";
 import {
   DEFAULT_AUTH_TIMEOUT,
   DEFAULT_SOCKET_CONNECT_TIMEOUT,
