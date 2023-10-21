@@ -135,7 +135,3 @@ dist
 
 # this is playground, used for testing & experimenting
 playground/
-
-# TODO add tic-tac-toe as a proper example
-tic-tac-toe/
-test/
