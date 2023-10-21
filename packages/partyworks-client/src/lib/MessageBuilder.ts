@@ -1,9 +1,9 @@
-import { InternalEvents } from "../types";
+import { PartyworksEvents } from "partyworks-shared";
 
 export class MessageBuilder {
   static updatePresenceMessage(data: { data: any; type: "set" | "partial" }) {
     return {
-      event: InternalEvents.PRESENSE_UPDATE,
+      event: PartyworksEvents.PRESENSE_UPDATE,
       data,
       _pwf: "-1",
     };
@@ -11,7 +11,7 @@ export class MessageBuilder {
 
   static broadcastMessage(data: any) {
     return {
-      event: InternalEvents.BROADCAST,
+      event: PartyworksEvents.BROADCAST,
       data,
       _pwf: "-1",
     };
