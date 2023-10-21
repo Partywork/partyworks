@@ -108,7 +108,6 @@ export abstract class PartyWorks<
               conn.presence = { ...conn.presence, ...parsedData.data.data };
             }
 
-            console.log(`sending an update or no?`);
             //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
             this.party.broadcast(
               JSON.stringify(MessageBuilder.presenceUpdate(conn)),
@@ -120,7 +119,6 @@ export abstract class PartyWorks<
           case PartyworksEvents.BROADCAST: {
             if (!this.validateBroadcast(conn, parsedData.data)) return;
 
-            console.log(`broadcastig`);
             this.party.broadcast(
               JSON.stringify(
                 MessageBuilder.broadcastEvent(conn, parsedData.data)
