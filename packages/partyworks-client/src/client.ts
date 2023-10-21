@@ -24,9 +24,9 @@ export interface PartyClient {
 }
 
 //but here also we need to provide a way to manuaaly connect
-export const createClient = ({
-  host,
-}: Omit<PartySocketOptions, "room">): PartyClient => {
+export const createClient = (
+  options: Omit<PartySocketOptions, "room">
+): PartyClient => {
   //i guess this is for future multirom support
   const rooms = new Map<string, PartyWorksRoom<any>>();
 
@@ -38,7 +38,7 @@ export const createClient = ({
     }
 
     const room = new PartyWorksRoom({
-      host,
+      ...options,
       room: roomId,
     });
     rooms.set(roomId, room);
