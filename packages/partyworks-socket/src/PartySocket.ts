@@ -654,24 +654,27 @@ export class PartySocket {
   //only stop if you want to stop the conn
   //reconn won't happen after this
   public stop() {
-    if (this.status === "started") {
-      this._log(LogLevel.INFO, this.counter, `[STOPPED]`);
-      this.status = "not_started";
-      this.closeSocket();
-
-      if (typeof window !== "undefined") {
-        window?.removeEventListener("offline", this.tryHeartbeat);
-        window?.removeEventListener("focus", this.tryHeartbeat);
-      }
-
-      //whatever pos it's in, we can easily just increase the counter,
-      //and the counter guards will take care of stopping themselves
-      //we just need to close if any existing con is there
-
-      //ok somehow make sure to cleanup this
-      //close the currently ongoing stuff
-      //also close the current conneciton if any
+    if (this.status !== "started") {
+      console.warn(`Cannot stop machine is not started`);
+      return;
     }
+
+    this._log(LogLevel.INFO, this.counter, `[STOPPED]`);
+    this.status = "not_started";
+    this.closeSocket();
+
+    if (typeof window !== "undefined") {
+      window?.removeEventListener("offline", this.tryHeartbeat);
+      window?.removeEventListener("focus", this.tryHeartbeat);
+    }
+
+    //whatever pos it's in, we can easily just increase the counter,
+    //and the counter guards will take care of stopping themselves
+    //we just need to close if any existing con is there
+
+    //ok somehow make sure to cleanup this
+    //close the currently ongoing stuff
+    //also close the current conneciton if any
   }
 
   //userland events should increase the counter
