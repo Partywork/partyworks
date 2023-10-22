@@ -82,6 +82,8 @@ export class PartySocket {
 
     options.config = { ...this.getDefaultSocketConfig(), ...options.config };
 
+    // console.log(JSON.stringify(options.config));
+
     if (!options.userId) {
       options.userId = generateUUID();
     }
@@ -313,6 +315,11 @@ export class PartySocket {
       return;
     }
 
+    const retryTime =
+      typeof this.options.config!.authBackoff![this.authRetry] === "number"
+        ? this.options.config!.authBackoff![this.authRetry]
+        : 5000;
+
     setTimeout(() => {
       if (counter !== this.counter) {
         this._log(LogLevel.DEBUG, counter, `[stale] [Switch -> Auth Block]`);
@@ -322,15 +329,9 @@ export class PartySocket {
       this._log(LogLevel.INFO, counter, `[Switch -> Auth Block]`);
 
       this.authentication();
-    }, this.options.config!.authBackoff![this.authRetry] || 5000);
+    }, retryTime);
 
-    this._log(
-      LogLevel.INFO,
-      counter,
-      `[Schedule Reauth ${
-        this.options.config!.authBackoff![this.authRetry] || 5000
-      }ms]`
-    );
+    this._log(LogLevel.INFO, counter, `[Schedule Reauth ${retryTime}ms]`);
 
     this.authRetry++;
   }
@@ -507,6 +508,12 @@ export class PartySocket {
       return;
     }
 
+    const retryTime =
+      typeof this.options.config!.connectionBackoff![this.authRetry] ===
+      "number"
+        ? this.options.config!.connectionBackoff![this.authRetry]
+        : 5000;
+
     setTimeout(() => {
       if (counter !== this.counter) {
         this._log(LogLevel.DEBUG, counter, `[stale] [Switch -> Auth Block]`);
@@ -516,15 +523,9 @@ export class PartySocket {
       this._log(LogLevel.INFO, counter, `[Switch -> Auth Block]`);
 
       this.authentication();
-    }, this.options.config!.connectionBackoff![this.connRetry] || 5000);
+    }, retryTime);
 
-    this._log(
-      LogLevel.INFO,
-      counter,
-      `[Schedule Reconnect ${
-        this.options.config!.connectionBackoff![this.connRetry] || 5000
-      }ms]`
-    );
+    this._log(LogLevel.INFO, counter, `[Schedule Reconnect ${retryTime}ms]`);
 
     this.connRetry++;
   }
