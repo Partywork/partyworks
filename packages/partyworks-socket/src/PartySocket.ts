@@ -643,8 +643,10 @@ export class PartySocket {
     this.status = "started";
     this.authentication();
 
-    window.addEventListener("offline", this.tryHeartbeat);
-    window.addEventListener("focus", this.tryHeartbeat);
+    if (typeof window !== "undefined") {
+      window.addEventListener("offline", this.tryHeartbeat);
+      window.addEventListener("focus", this.tryHeartbeat);
+    }
 
     //? should we try reconnect online, maybe in certain statuses, huh dunno :/
   }
@@ -657,8 +659,11 @@ export class PartySocket {
       this.status = "not_started";
       this.closeSocket();
 
-      window.removeEventListener("offline", this.tryHeartbeat);
-      window.removeEventListener("focus", this.tryHeartbeat);
+      if (typeof window !== "undefined") {
+        window?.removeEventListener("offline", this.tryHeartbeat);
+        window?.removeEventListener("focus", this.tryHeartbeat);
+      }
+
       //whatever pos it's in, we can easily just increase the counter,
       //and the counter guards will take care of stopping themselves
       //we just need to close if any existing con is there
