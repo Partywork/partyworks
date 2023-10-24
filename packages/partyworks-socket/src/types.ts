@@ -126,7 +126,8 @@ export interface PartySocketOptions {
    */
   connectionResolver?: (
     message: MessageEvent<any>,
-    resolver: () => void
+    resolver: () => void,
+    rejecter: (err: any) => void
   ) => void;
 
   /**

@@ -68,6 +68,7 @@ export class PartySocket {
   private connRetry: number = 0;
   private authRetry: number = 0;
   private counter = 0;
+  private authCounter: undefined | number;
   public eventHub: {
     messages: SingleEventSource<MessageEvent<any>>;
     status: SingleEventSource<PartySocketConnectionState>; //will update the status of the machine, maybe reqires a helper to get useful states
@@ -137,6 +138,8 @@ export class PartySocket {
     //since the counter++ events also change the stateBlock
     //honestly we can let ping/pong decide it, but the accuracy drops to the heartbeat interval
     // we try reconnect, on our side, if it's anything other than connected we don't do anything
+
+    //ok ok good, during testing just found out, this guard also blocks such errors on premature connection errors
     if (this.stateBlock === "connected") {
       this.closeSocket();
       this.authentication();
@@ -148,8 +151,8 @@ export class PartySocket {
 
     //our signal to stop retry
     if (event.code === 4000) {
-      this.counter++;
-      this.stateBlock = "initial";
+      this._log(LogLevel.INFO, this.counter, `[Socket Closed]`);
+      this.closeSocket();
       return;
     }
 
@@ -224,11 +227,37 @@ export class PartySocket {
   }
 
   //block
-  private async authentication() {
+  private async authentication(counter?: number, reauth?: boolean) {
     this.stateBlock = "auth";
     this.eventHub.status.notify(this.stateBlock);
-    const localCounter = this.counter;
-    this._log(LogLevel.INFO, localCounter, `[Authenticating...]`);
+    const localCounter = counter || this.counter;
+
+    if (localCounter !== this.counter) {
+      this._log(LogLevel.DEBUG, localCounter, `[Stale] [Authenticating...]`);
+      return;
+    }
+
+    if (!reauth) {
+      if (!this.authCounter) {
+        this.authCounter = counter;
+      } else if (this.authCounter === localCounter) {
+        this._log(
+          LogLevel.DEBUG,
+          localCounter,
+          `[Duplicate] [Authenticating...]`
+        );
+
+        return;
+      } else if (this.authCounter < localCounter) {
+        this.authCounter = localCounter;
+      }
+    }
+
+    this._log(
+      LogLevel.INFO,
+      localCounter,
+      `[${reauth ? `Re` : ""}Authenticating...]`
+    );
 
     if (typeof this.options.auth === "function") {
       try {
@@ -328,7 +357,7 @@ export class PartySocket {
 
       this._log(LogLevel.INFO, counter, `[Switch -> Auth Block]`);
 
-      this.authentication();
+      this.authentication(counter, true);
     }, retryTime);
 
     this._log(LogLevel.INFO, counter, `[Schedule Reauth ${retryTime}ms]`);
@@ -356,11 +385,8 @@ export class PartySocket {
       if (counter !== this.counter) {
         this._log(LogLevel.DEBUG, counter, `[stale] [Connection ok]`);
 
-        conn.close();
-        //@ts-ignore
-        conn = null; //apparently removes all event listeners,
+        this.removeConnection(counter, conn);
 
-        //todo cleanup the socket
         return;
       }
 
@@ -416,6 +442,8 @@ export class PartySocket {
     let connectionResolverRef: (v: any) => void;
     let cleanupRejectRef: (v: any) => void;
 
+    //todo subscribe to either counter update or the status update, and reject/close faster
+
     const connectedSock = new Promise<WebSocket>((resolve, reject) => {
       const conn = new WebSocket(url);
 
@@ -423,12 +451,16 @@ export class PartySocket {
 
       const connectionResolver = (e: MessageEvent<any>) => {
         if (typeof this.options.connectionResolver === "function") {
-          this.options.connectionResolver(e, () => {
-            conn.addEventListener("close", cleanupReject);
-            conn.removeEventListener("error", cleanupReject);
-            conn.removeEventListener("message", connectionResolver);
-            resolve(conn);
-          });
+          this.options.connectionResolver(
+            e,
+            () => {
+              conn.addEventListener("close", cleanupReject);
+              conn.removeEventListener("error", cleanupReject);
+              conn.removeEventListener("message", connectionResolver);
+              resolve(conn);
+            },
+            reject
+          );
         }
       };
       connectionResolverRef = connectionResolver;
@@ -492,6 +524,8 @@ export class PartySocket {
     this.stateBlock = "connectionError";
     this.eventHub.status.notify(this.stateBlock);
 
+    this._log(LogLevel.ERROR, counter, `[Error] Connection Failed`, error);
+
     if (error instanceof StopRetry) {
       this._log(LogLevel.ERROR, counter, `[Stop Retry] Connection Failed`);
       this.failed();
@@ -522,7 +556,7 @@ export class PartySocket {
 
       this._log(LogLevel.INFO, counter, `[Switch -> Auth Block]`);
 
-      this.authentication();
+      this.authentication(counter, true);
     }, retryTime);
 
     this._log(LogLevel.INFO, counter, `[Schedule Reconnect ${retryTime}ms]`);
@@ -583,9 +617,9 @@ export class PartySocket {
       );
 
       //cleanup socket
-      this.removeConnection(conn);
+      this.removeConnection(counter, conn);
       this.counter++;
-      this.authentication();
+      this.authentication(this.counter, true);
     }, 2000);
 
     const unsub = this.eventHub.messages.subscribe((e) => {
@@ -609,8 +643,9 @@ export class PartySocket {
   }
 
   //helper
-  private removeConnection(socket?: WebSocket) {
+  private removeConnection(counter: number, socket?: WebSocket) {
     if (socket) {
+      this._log(LogLevel.INFO, counter, `[Remove Con]`);
       this.removeSocketEventListeners(socket);
       socket.close();
     }
@@ -626,6 +661,7 @@ export class PartySocket {
       this.socket = null;
     }
 
+    this._log(LogLevel.INFO, this.counter, `[Inital]`);
     this.counter++;
     this.stateBlock = "initial"; //todo maybe add closed :/
     this.eventHub.status.notify(this.stateBlock);
@@ -679,16 +715,19 @@ export class PartySocket {
   }
 
   //userland events should increase the counter
-  public reconnect() {
+  public reconnect = () => {
     if (this.status !== "started") {
       console.warn(`Cannot reconnect machine is not started`);
       return;
     }
 
+    const counter = this.counter;
     this.closeSocket();
-    this._log(LogLevel.INFO, this.counter, `[Reconnect]`);
-    this.authentication();
-  }
+
+    this._log(LogLevel.INFO, counter + 1, `[Reconnecting...]`);
+
+    this.authentication(counter + 1);
+  };
 
   public close() {
     if (this.status !== "started") {
