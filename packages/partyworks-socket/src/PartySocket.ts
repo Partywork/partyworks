@@ -373,6 +373,7 @@ export class PartySocket {
 
     try {
       let conn = await this._connectSocket(
+        counter,
         this.buildUrl({
           host: params?.host || this.options.host,
           room: params?.room || this.options.host,
@@ -430,7 +431,7 @@ export class PartySocket {
   }
 
   //helper
-  private async _connectSocket(url: string) {
+  private async _connectSocket(counter: number, url: string) {
     if (
       this.options.waitForRoom &&
       typeof this.options.connectionResolver !== "function"
@@ -442,9 +443,18 @@ export class PartySocket {
     let connectionResolverRef: (v: any) => void;
     let cleanupRejectRef: (v: any) => void;
 
+    let unsub: any;
+
     //todo subscribe to either counter update or the status update, and reject/close faster
 
     const connectedSock = new Promise<WebSocket>((resolve, reject) => {
+      //check if the status changes before that, and reject/disconnect early
+      unsub = this.eventHub.status.subscribe(() => {
+        if (counter !== this.counter) {
+          reject();
+        }
+      });
+
       const conn = new WebSocket(url);
 
       con = conn;
@@ -457,6 +467,7 @@ export class PartySocket {
               conn.addEventListener("close", cleanupReject);
               conn.removeEventListener("error", cleanupReject);
               conn.removeEventListener("message", connectionResolver);
+              unsub();
               resolve(conn);
             },
             reject
@@ -477,6 +488,7 @@ export class PartySocket {
         if (!this.options.waitForRoom) {
           conn.removeEventListener("close", cleanupReject);
           conn.removeEventListener("error", cleanupReject);
+          unsub();
           resolve(conn);
         }
       });
@@ -499,6 +511,8 @@ export class PartySocket {
       );
       return con;
     } catch (error) {
+      //unsub the listener
+      unsub();
       //The case where the conn is timeout, but the conn succeeds, this will leave a rouge conn
       //given a normal timeout of say 10sec it's higly unlike to happen
       if (con) {
@@ -513,6 +527,8 @@ export class PartySocket {
 
         this.removeSocketEventListeners(con as WebSocket);
 
+        //for 'ws' testing
+        (con as WebSocket).onerror = () => {};
         (con as WebSocket)?.close();
       }
       throw error;

@@ -624,16 +624,14 @@ it("should handle multiple reconnects", (done) => {
 
     //@ts-ignore ------ private prop
     if (conn === "connected" && socket.counter === 5) {
-      setTimeout(() => {
-        expect([...socketServer.clients.values()].length).toBe(1);
-        socket.stop();
-      }, 50);
+      expect([...socketServer.clients.values()].length).toBe(1);
+      socket.stop();
 
       //give some time to close
       setTimeout(() => {
         expect([...socketServer.clients.values()].length).toBe(0);
         done();
-      }, 100);
+      }, 10);
     }
   });
 
@@ -739,10 +737,8 @@ it("should handle fuzzy(ish) reconnects with async auth", (done) => {
 
       //@ts-ignore private prop
       if (socket.counter === 5) {
-        setTimeout(() => {
-          expect([...socketServer.clients.values()].length).toBe(1);
-          socket.stop();
-        }, 10);
+        expect([...socketServer.clients.values()].length).toBe(1);
+        socket.stop();
 
         //give some time to close
         setTimeout(() => {
