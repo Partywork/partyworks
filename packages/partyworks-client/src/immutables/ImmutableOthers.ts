@@ -73,12 +73,12 @@ export class ImmutablePeers<TPresence, TUserMeta> {
   }
 
   disconnectPeer(peerId: string) {
-    this.invalidateCache();
-
     // Retrieve the peer before deleting it
     const deletedPeer = this._connectedPeers.get(peerId);
 
     if (deletedPeer) {
+      this.invalidateCache();
+
       // Delete the peer from the map
       this._connectedPeers.delete(peerId);
 

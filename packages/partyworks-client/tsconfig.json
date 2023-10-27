@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "incremental": false
+    "incremental": false,
+    "verbatimModuleSyntax": false
   }
 }

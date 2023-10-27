@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "pub": "npm version patch  && npm run build &&  npm publish --tag experimental"
+    "pub": "npm version patch  && npm run build &&  npm publish --tag experimental",
+    "test:watch": "jest --watchAll --no-cache --detectOpenHandles"
   },
   "keywords": [
     "partyworks",
@@ -33,7 +34,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/uuid": "^9.0.5"
+    "@types/uuid": "^9.0.5",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1"
   },
   "dependencies": {
     "partyworks-shared": "^0.0.0",

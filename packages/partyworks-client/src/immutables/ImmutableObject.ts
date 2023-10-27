@@ -26,8 +26,25 @@ export class ImmutableObject<T extends object> {
       const updatedData = { ...this.data, [key]: value } as T;
       this.data = Object.freeze(updatedData);
     } else {
-      // If the key exists, update the subkey(s) within it.
-      const subkeyData = { ...(this.data[key] || {}), ...value } as T[K];
+      let subkeyData: any;
+
+      if (
+        typeof value === "number" ||
+        typeof value === "string" ||
+        typeof value === "boolean"
+      ) {
+        subkeyData = value;
+      } else if (Array.isArray(value)) {
+        if (Array.isArray(this.data[key])) {
+          subkeyData = [...((this.data[key] || []) as any), ...value] as T[K];
+        } else {
+          subkeyData = value;
+        }
+      } else {
+        // If the key exists, update the subkey(s) within it.
+        subkeyData = { ...(this.data[key] || {}), ...value } as T[K];
+      }
+
       const updatedData = { ...this.data, [key]: subkeyData } as T;
       this.data = Object.freeze(updatedData);
     }
