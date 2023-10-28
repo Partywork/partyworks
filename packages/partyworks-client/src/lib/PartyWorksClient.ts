@@ -144,11 +144,13 @@ export class PartyWorksRoom<
   TEvents extends Record<string, any> = {},
   TEventsEmit = any //this should be for emitting the event
 > extends PartyWorksEventSource<TEvents> {
-  _partySocket: PartySocket;
-  _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
-  _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
-  _peers: ImmutablePeers<TPresence, TUserMeta>;
-  _lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
+  private _id: string;
+  private _partySocket: PartySocket;
+  private _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
+  private _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
+  private _peers: ImmutablePeers<TPresence, TUserMeta>;
+  private _lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
+
   eventHub: {
     allMessages: SingleEventSource<MessageEvent<any>>; //for all the messages, servers as socket.addEventlistener("message")
     message: SingleEventSource<MessageEvent<any>>; //for all but internal messages, internal ones will be ignored, most likely user's use this one
@@ -165,12 +167,16 @@ export class PartyWorksRoom<
     status: SingleEventSource<PartySocketConnectionState>;
   };
   //? wait can't i make it a single event source
-  ridListeners = new SingleEventSource<Readonly<TEvents[keyof TEvents]>>(); //another EventSource just for ridListeners
+  private ridListeners = new SingleEventSource<
+    Readonly<TEvents[keyof TEvents]>
+  >(); //another EventSource just for ridListeners
 
   constructor(
     options: PartySocketOptions & Partial<{ lostConnectionTimeout: number }>
   ) {
     super();
+
+    this._id = options.room;
 
     //we will start closed
     this._partySocket = new PartySocket({
@@ -191,6 +197,10 @@ export class PartyWorksRoom<
     };
     this._message();
     this._peers = new ImmutablePeers();
+  }
+
+  get id() {
+    return this._id;
   }
 
   connect() {
