@@ -3,8 +3,8 @@ export const DEFAULT_SOCKET_CONNECT_TIMEOUT = 10000;
 export const DEFAULT_HEARTBEAT_INTERVAL = 30000;
 export const DEFAULT_CONNECTION_BACKOFF = [250, 500, 1000, 5000];
 export const DEFAULT_AUTH_BACKOFF = [250, 500, 1000, 5000];
-export const DEFAULT_MAX_CONN_TRIES = 5;
-export const DEFAULT_MAX_AUTH_TRIES = 5;
+export const DEFAULT_MAX_CONN_TRIES = Infinity;
+export const DEFAULT_MAX_AUTH_TRIES = Infinity;
 
 export enum LogLevel {
   DEBUG = 0,
