@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  transpilePackages: [
+    "partyworks-client",
+    "partyworks-server",
+    "partyworks-react",
+  ],
 
   //todo remove this it's erroring with partyworks-server for some reason :/
   typescript: {
