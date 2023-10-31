@@ -53,8 +53,6 @@ const broadcastMessage = (msg: string) => {
 //*Magic
 export default class GroupChat extends PartyWorks {
   setup() {
-    console.log(this.party.env);
-    console.log(`here ->`);
     const botId = "bot";
     this.addBot(botId, {
       state: { info: { userId: botId, username: "partybot", bot: true } },
