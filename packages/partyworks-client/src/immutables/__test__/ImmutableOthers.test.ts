@@ -44,6 +44,32 @@ describe("test Immutable Others", () => {
     ]);
   });
 
+  it("should add bulk peers2", () => {
+    const others = new ImmutablePeers();
+
+    others.addPeers([
+      { userId: "9", info: {} },
+      { userId: "21", info: {} },
+      { userId: "31", info: {} },
+      { userId: "41", info: {} },
+    ]);
+
+    //this should ovveride the prev values
+    others.addPeers([
+      { userId: "1", info: {} },
+      { userId: "2", info: {} },
+      { userId: "3", info: {} },
+      { userId: "4", info: {} },
+    ]);
+
+    expect(others.current).toStrictEqual([
+      { userId: "1", info: {} },
+      { userId: "2", info: {} },
+      { userId: "3", info: {} },
+      { userId: "4", info: {} },
+    ]);
+  });
+
   it("should update peer 2", () => {
     const others = new ImmutablePeers();
 

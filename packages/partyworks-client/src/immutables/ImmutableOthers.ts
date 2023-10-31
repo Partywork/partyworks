@@ -27,6 +27,9 @@ export class ImmutablePeers<TPresence, TUserMeta> {
 
   //ADDING USERS IN BULK, USED WHEN INITIAL ROOM STATE IS SYNCED
   addPeers(peers: Peer<TPresence, TUserMeta>[]) {
+    //clear, since this is only calld on room_state
+    this._connectedPeers.clear();
+
     for (let peer of peers) {
       this._connectedPeers.set(peer.userId, Object.freeze(peer));
     }
