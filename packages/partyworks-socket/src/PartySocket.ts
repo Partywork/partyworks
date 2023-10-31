@@ -211,7 +211,10 @@ export class PartySocket {
         : "wss")
     }://${host}/${party ? `parties/${party}` : "party"}/${room}`;
     if (data) {
-      url += `?${new URLSearchParams({ ...data, userId }).toString()}`;
+      url += `?_pk=${userId}&${new URLSearchParams({
+        ...data,
+        userId,
+      }).toString()}`;
     } else {
       url += `?_pk=${userId}`;
     }
@@ -376,7 +379,7 @@ export class PartySocket {
         counter,
         this.buildUrl({
           host: params?.host || this.options.host,
-          room: params?.room || this.options.host,
+          room: params?.room || this.options.room,
           userId: this.options.userId!,
           party: this.options.party,
           data: params?.data,
