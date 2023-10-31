@@ -2,7 +2,7 @@ import { createClient } from "partyworks-client";
 import { createRoomContext } from "partyworks-react";
 
 const client = createClient({
-  host: "localhost:1999",
+  host: process.env.PARTY_URL || "localhost:1999",
   auth: () => {
     if (typeof window !== "undefined") {
       return {
