@@ -53,6 +53,8 @@ export function createRoomContext<
   function RoomProvider(props: RoomProviderProps) {
     const { children, roomId } = props;
 
+    if (!roomId) throw new Error("roomId is required");
+
     const [room, setRoom] = useState(
       client.enter(roomId) as PartyWorksRoom<
         TPresence,
