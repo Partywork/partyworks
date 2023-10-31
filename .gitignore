@@ -135,3 +135,4 @@ dist
 
 # this is playground, used for testing & experimenting
 playground/
+.vercel
