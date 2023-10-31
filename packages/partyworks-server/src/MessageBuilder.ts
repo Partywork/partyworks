@@ -1,5 +1,5 @@
 import { PartyworksEvents } from "partyworks-shared";
-import { Player } from "./types";
+import { Bot, Player } from "./types";
 import type * as Party from "partykit/server";
 
 export class MessageBuilder {
@@ -18,7 +18,7 @@ export class MessageBuilder {
   }: {
     self: Player;
     info: any;
-    users: Player[];
+    users: (Player | Bot)[];
     roomData: any;
   }) {
     return {
@@ -42,7 +42,7 @@ export class MessageBuilder {
     };
   }
 
-  static userOnline(player: Player) {
+  static userOnline(player: Player | Bot) {
     return {
       event: PartyworksEvents.USER_JOINED,
       data: {
@@ -64,7 +64,7 @@ export class MessageBuilder {
     };
   }
 
-  static presenceUpdate(player: Player) {
+  static presenceUpdate(player: Player | Bot) {
     return {
       event: PartyworksEvents.PRESENSE_UPDATE,
       data: {
@@ -86,7 +86,7 @@ export class MessageBuilder {
     };
   }
 
-  static broadcastEvent(player: Player, data: any) {
+  static broadcastEvent(player: Player | Bot, data: any) {
     return {
       event: PartyworksEvents.BROADCAST,
       data: {

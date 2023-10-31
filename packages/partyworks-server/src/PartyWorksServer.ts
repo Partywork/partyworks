@@ -1,6 +1,6 @@
 import type * as Party from "partykit/server";
 import { PartyworksEvents } from "partyworks-shared";
-import { Player } from "./types";
+import { Bot, BotOptions, Player } from "./types";
 import { MessageBuilder } from "./MessageBuilder";
 import { MessageEvent } from "@cloudflare/workers-types";
 
@@ -14,6 +14,8 @@ type CustomEvents<TEvents, TState> = {
     ) => void;
   };
 };
+
+const noop = () => {};
 
 //ok so this pattern is a little bit more strict
 //this can be annoying for some users dx wise as they just want typesafety in terms of messages
@@ -36,6 +38,10 @@ type CustomEvents<TEvents, TState> = {
 //todo remove one of the implementations for player.sendData vs this.send & partyworks.broadcastData vs this.broadcast
 //well most likely player.sendData & partyworks.broadcastData are gonna be removed, since they funky :>
 
+//a bot/server user api
+//create a bot [likkely on setup]
+//connect the bot
+
 export abstract class PartyWorks<
   TState = any,
   TEventsListener extends Record<string, any> = {},
@@ -50,8 +56,10 @@ export abstract class PartyWorks<
       data: TBroadcasts[K]
     ) => void;
   };
-  //todo :/ not really needed, well maybe for type safety, huh, dunno, since partykit has added getState | setState to the connection
-  players: Player<TState, TEventEmitters, TPresence>[] = [];
+
+  private players: Player<TState, TEventEmitters, TPresence>[] = [];
+
+  private bots: Bot<TState, TPresence>[] = [];
 
   private _customEvents: CustomEvents<TEventsListener, TState> =
     {} as CustomEvents<TEventsListener, TState>;
@@ -125,6 +133,8 @@ export abstract class PartyWorks<
               ),
               [conn.id]
             );
+
+            this.bots.forEach((bot) => bot.onBroadcast(conn, parsedData.data));
             break;
           }
 
@@ -174,6 +184,12 @@ export abstract class PartyWorks<
   //* Userfacing Internal Methods, not to be overriden, sadly typescript does not have final keyword so we can't enforce em yet
   //*-----------------------------------
 
+  getConnectedUsers(options?: { includeBots?: boolean }) {
+    if (options && options.includeBots) return [...this.players, ...this.bots];
+
+    return this.players;
+  }
+
   async handleConnect(
     connection: Player<TState, TEventEmitters>,
     ctx: Party.ConnectionContext
@@ -209,7 +225,7 @@ export abstract class PartyWorks<
           //@ts-ignore , we will sync the info property if defined
           info: connection.state?.info! as any,
           self: connection,
-          users: this.players,
+          users: [...this.players, ...this.bots],
           roomData,
         })
       )
@@ -221,6 +237,9 @@ export abstract class PartyWorks<
       [connection.id]
     );
 
+    //call the bot handlers
+    this.bots.forEach((bot) => bot.onUserJoined(connection));
+
     this.sendEventOnConnect(connection);
   }
 
@@ -230,6 +249,9 @@ export abstract class PartyWorks<
     this.party.broadcast(
       JSON.stringify(MessageBuilder.userOffline(connection))
     );
+
+    //call the bot handlers
+    this.bots.forEach((bot) => bot.onUserLeft(connection as any));
   }
 
   handleClose(connection: Party.Connection) {
@@ -308,17 +330,35 @@ export abstract class PartyWorks<
     }
   }
 
-  //todo
-  // adding a updatePresence & udpateUserMeta function, to let users update it on thier own as well
-  // also adding optional validators for Presence, so the users can easily validate it on the server if they want
-
   //ok here we take either a party.connection or a playerid
   //this function will give an api to update a user's presence
-  updatePresence(conn: Party.Connection, presence: Partial<TPresence>) {
+  updatePresence(
+    conn: Party.Connection,
+    data: { presence: Partial<TPresence>; type: "partial" }
+  ): void;
+
+  updatePresence(
+    conn: Party.Connection,
+    data: { presence: TPresence; type: "set" }
+  ): void;
+  updatePresence(
+    conn: Party.Connection,
+    {
+      presence,
+      type,
+    }:
+      | { presence: Partial<TPresence>; type: "partial" }
+      | { presence: TPresence; type: "set" }
+  ) {
     const player = conn as Player<any, any, TPresence>; //TYPECASTING :/
 
-    player.presence = { ...player.presence, ...presence };
+    if (type === "set") {
+      player.presence = presence;
+    } else {
+      player.presence = { ...player.presence, ...presence };
+    }
 
+    //todo sending only partial updates maybe
     this.party.broadcast(JSON.stringify(MessageBuilder.presenceUpdate(player)));
   }
 
@@ -329,6 +369,88 @@ export abstract class PartyWorks<
   updateUserMeta(conn: Party.Connection) {
     this.party.broadcast(
       JSON.stringify(MessageBuilder.metaUpdate(conn as Player))
+    );
+  }
+
+  //* bot/server user api
+  addBot<T = any>(
+    id: string,
+    { state, presence }: { state: T; presence: TPresence } & Partial<BotOptions>
+  ): boolean;
+  addBot(
+    id: string,
+    {
+      state,
+      presence,
+    }: { state: TState; presence: TPresence } & Partial<BotOptions>
+  ): boolean;
+  addBot(
+    id: string,
+    {
+      state,
+      presence,
+      onBroadcast,
+      onPresenceUpdate,
+      onUserJoined,
+      onUserLeft,
+    }: { state: TState; presence: TPresence } & Partial<BotOptions>
+  ) {
+    const existing = this.bots.find((bot) => bot.id === id);
+
+    if (existing) return false;
+
+    const bot: Bot = {
+      id,
+      state,
+      presence,
+      onUserJoined: onUserJoined ?? noop,
+      onUserLeft: onUserLeft ?? noop,
+      onBroadcast: onBroadcast ?? noop,
+      onPresenceUpdate: onPresenceUpdate ?? noop,
+    };
+
+    this.bots.push(bot);
+
+    //notify everyone that the user has connected
+    this.party.broadcast(JSON.stringify(MessageBuilder.userOnline(bot)));
+
+    return true;
+  }
+
+  updateBotPresence(
+    id: string,
+    presence: Partial<TPresence>,
+    type?: "partial"
+  ): void;
+  updateBotPresence(id: string, presence: TPresence, type: "set"): void;
+  updateBotPresence(
+    id: string,
+    presence: Partial<TPresence> | TPresence,
+    type: "set" | "partial" = "partial"
+  ) {
+    const bot = this.bots.find((bot) => bot.id === id);
+
+    //? hmm, should we return a boolean or maybe throw an error ?
+    if (!bot) return;
+
+    if (type === "set") {
+      bot.presence = presence as TPresence;
+    } else {
+      bot.presence = { ...bot.presence, ...presence };
+    }
+
+    this.party.broadcast(JSON.stringify(MessageBuilder.presenceUpdate(bot)));
+  }
+
+  sendBotBroadcast(id: string, data: any, ignore?: string[]) {
+    const bot = this.bots.find((bot) => bot.id === id);
+
+    //? hmm, should we return a boolean or maybe throw an error ?
+    if (!bot) return;
+
+    this.party.broadcast(
+      JSON.stringify(MessageBuilder.broadcastEvent(bot, data)),
+      ignore
     );
   }
 
