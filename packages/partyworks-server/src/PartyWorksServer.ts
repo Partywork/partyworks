@@ -178,7 +178,7 @@ export abstract class PartyWorks<
     connection: Player<TState, TEventEmitters>,
     ctx: Party.ConnectionContext
   ) {
-    this.customDataOnConnect(connection);
+    this.customDataOnConnect(connection, ctx);
     connection.addEventListener("message", (e) => {
       this.handleEvents(e, connection);
     });
@@ -365,7 +365,10 @@ export abstract class PartyWorks<
   roomState(): any | Promise<any> {}
 
   //this is for sending custom
-  customDataOnConnect(player: Player<TState, TEventEmitters>): void {}
+  customDataOnConnect(
+    player: Player<TState, TEventEmitters>,
+    ctx: Party.ConnectionContext
+  ): void {}
 
   //maybe this is gonna be the custom state on connect
   customRoomState(player: Player<TState, TEventEmitters>): any {}
