@@ -1,0 +1,3 @@
+# group chat with gpt
+
+this is a live group chat partyworks example which highlights the bot api of partyworks server. where you can easily create bots in your apps and they are like regular users, docs coming soon...

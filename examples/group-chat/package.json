@@ -1,0 +1,33 @@
+{
+  "name": "group-chat",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:party": "partykit dev",
+    "dev:next": "next dev",
+    "dev": "concurrently npm:dev:*",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "14.0.0",
+    "partykit": "^0.0.32",
+    "partyworks-client": "^0.0.0",
+    "partyworks-react": "^0.0.0",
+    "partyworks-server": "^0.0.1",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-linkify": "^1.0.0-alpha"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/react-linkify": "^1.0.3",
+    "concurrently": "^8.2.2",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.0",
+    "typescript": "^5"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "partyworks-group-chat-example",
+  "main": "party/index.ts",
+  "port": 1999
+}
