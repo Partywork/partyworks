@@ -6,6 +6,7 @@
     "dev:party": "partykit dev",
     "dev:next": "next dev",
     "dev": "concurrently npm:dev:*",
+    "deploy": "partykit deploy",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -16,7 +17,7 @@
     "partykit": "^0.0.32",
     "partyworks-client": "^0.0.1",
     "partyworks-react": "^0.0.1",
-    "partyworks-server": "^0.0.2",
+    "partyworks-server": "^0.0.3",
     "react": "^18",
     "react-dom": "^18",
     "react-linkify": "^1.0.0-alpha"
