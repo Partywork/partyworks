@@ -17,6 +17,7 @@ import type {
 import { PartyWorksRoom, shallow } from "partyworks-client";
 
 import { useSyncExternalStoreWithSelector } from "use-sync-external-store/shim/with-selector";
+import { LostConnectionStatus } from "partyworks-client";
 
 //* API
 //* [createRoomContext, RoomProvider, useRoom, useStatus]
@@ -261,6 +262,25 @@ export function createRoomContext<
     return useSyncExternalStore(sub, snap, snap);
   }
 
+  function useLostConnectionListener(
+    listener: (data: LostConnectionStatus) => void
+  ) {
+    const room = useRoom();
+    const savedRef = useRef(listener);
+
+    useEffect(() => {
+      savedRef.current = listener;
+    });
+
+    useEffect(() => {
+      const listener = (data: any) => {
+        savedRef.current(data);
+      };
+
+      return room.eventHub.lostConnection.subscribe(listener);
+    }, [room]);
+  }
+
   function useMessage(listener: (data: MessageEvent<any>) => void) {
     const room = useRoom();
     const savedRef = useRef(listener);
@@ -352,5 +372,6 @@ export function createRoomContext<
     useAllMessage, //WELL JUST PROVIDING IT :/
     useError,
     useStatus,
+    useLostConnectionListener,
   };
 }
