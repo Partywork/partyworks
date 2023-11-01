@@ -7,6 +7,7 @@ const client = createClient({
     maxConnTries: 10, //to also simulate disconnect
   },
   lostConnectionTimeout: 2000,
+  logLevel: 0, //show logs for console. if anyone's interested
 });
 
 export const { RoomProvider, useStatus, useLostConnectionListener } =
