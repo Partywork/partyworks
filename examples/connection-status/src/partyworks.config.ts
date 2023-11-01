@@ -10,5 +10,5 @@ const client = createClient({
   logLevel: 0, //show logs for console. if anyone's interested
 });
 
-export const { RoomProvider, useStatus, useLostConnectionListener } =
+export const { RoomProvider, useOthers, useStatus, useLostConnectionListener } =
   createRoomContext(client);

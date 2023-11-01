@@ -1,3 +1,10 @@
+.userCount {
+  text-align: center;
+  padding: 5px;
+  font-weight: 500;
+  zoom: 1.5;
+}
+
 .status {
   zoom: 2.5;
   display: flex;
