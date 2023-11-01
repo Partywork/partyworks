@@ -1,5 +1,4 @@
-import type { PartySocketOptions } from "partyworks-socket";
-import { PartyWorksRoom } from "./lib/PartyWorksClient";
+import { PartyWorksRoom, PartyWorksRoomOptions } from "./lib/PartyWorksClient";
 
 //* THIS IS CLIENT
 //* API [batch & throttle, ENTER, LEAVE, MULTI-ROOM-SUPPORT]
@@ -23,10 +22,10 @@ export interface PartyClient {
   leave: (roomId: string) => void;
 }
 
+export type PartyworksClientOptions = Omit<PartyWorksRoomOptions, "room">;
+
 //but here also we need to provide a way to manuaaly connect
-export const createClient = (
-  options: Omit<PartySocketOptions, "room">
-): PartyClient => {
+export const createClient = (options: PartyworksClientOptions): PartyClient => {
   //i guess this is for future multirom support
   const rooms = new Map<string, PartyWorksRoom<any>>();
 

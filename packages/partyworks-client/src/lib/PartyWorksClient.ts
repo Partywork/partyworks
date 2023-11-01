@@ -109,6 +109,10 @@ export interface RoomBroadcastEventListener<
   userId: string;
 }
 
+export interface PartyWorksRoomOptions extends PartySocketOptions {
+  lostConnectionTimeout?: number;
+}
+
 export class PartyWorksRoom<
   TPresence = any,
   TUserMeta = any,
@@ -143,9 +147,7 @@ export class PartyWorksRoom<
     status: SingleEventSource<PartySocketConnectionState>;
   };
 
-  constructor(
-    options: PartySocketOptions & Partial<{ lostConnectionTimeout: number }>
-  ) {
+  constructor(options: PartyWorksRoomOptions) {
     super();
 
     this._id = options.room;
