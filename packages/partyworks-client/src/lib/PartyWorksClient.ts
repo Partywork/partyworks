@@ -635,7 +635,7 @@ export class PartyWorksRoom<
   }
 
   leave() {
-    this._partySocket.close();
+    this._partySocket.stop();
   }
 
   getSelf = () => {
