@@ -9,11 +9,9 @@ import {
   type UnsubscribeListener,
   PartyworksEvents,
 } from "partyworks-shared";
-
 import { ImmutableObject } from "../immutables/ImmutableObject";
 import type { Peer, Self } from "../types";
 import { ImmutablePeers } from "../immutables/ImmutableOthers";
-
 import { PartyWorksEventSource } from "./EventSource";
 import { v4 as uuid } from "uuid";
 import { MessageBuilder } from "./MessageBuilder";
@@ -69,10 +67,6 @@ type RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent> = {
 //i think for the internal events we can have rpc based format, but custom events can be tricky the ones that don't follow req/res format
 type PartyworksEventsMap =
   | {
-      event: PartyworksEvents.CONNECT;
-      data: { id: string };
-    }
-  | {
       event: PartyworksEvents.ROOM_STATE;
       data: {
         self: {
@@ -105,25 +99,6 @@ type UpdateMyPresence<TPresence> = {
   (data: TPresence, type: "set"): void;
 };
 
-export enum InternalListeners {
-  Message = "message",
-  SelfUpdate = "selfUpdate",
-  RoomUpdate = "roomUpdate",
-  UserJoined = "userJoined",
-  UserLeft = "userLeft",
-}
-
-export interface InternalListenersMap<T = any> {
-  message: MessageEvent<any>;
-  selfUpdate: {};
-  roomUpdate: { data: { others: Peer[] } };
-  userJoined: { peer: Peer };
-  userleft: { peer: Peer };
-  peersUpdate: {};
-  presenceUpdate: T;
-  broadcast: { data: { data: any; userId: string } };
-}
-
 export interface RoomBroadcastEventListener<
   TPresence,
   TUserMeta,
@@ -133,9 +108,6 @@ export interface RoomBroadcastEventListener<
   user: Peer<TPresence, TUserMeta> | null;
   userId: string;
 }
-
-//so we can make .on .off .emitAwait events for the customEvents
-//subscribe for the internal events
 
 export class PartyWorksRoom<
   TPresence = any,
@@ -151,7 +123,11 @@ export class PartyWorksRoom<
   private _peers: ImmutablePeers<TPresence, TUserMeta>;
   private _lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
 
-  eventHub: {
+  private ridListeners = new SingleEventSource<
+    Readonly<TEvents[keyof TEvents]>
+  >(); //another EventSource just for ridListeners
+
+  public eventHub: {
     allMessages: SingleEventSource<MessageEvent<any>>; //for all the messages, servers as socket.addEventlistener("message")
     message: SingleEventSource<MessageEvent<any>>; //for all but internal messages, internal ones will be ignored, most likely user's use this one
     others: SingleEventSource<{
@@ -166,10 +142,6 @@ export class PartyWorksRoom<
     error: SingleEventSource<{ error: any; event?: string }>; //this is for event & non event based errors
     status: SingleEventSource<PartySocketConnectionState>;
   };
-  //? wait can't i make it a single event source
-  private ridListeners = new SingleEventSource<
-    Readonly<TEvents[keyof TEvents]>
-  >(); //another EventSource just for ridListeners
 
   constructor(
     options: PartySocketOptions & Partial<{ lostConnectionTimeout: number }>
@@ -215,20 +187,13 @@ export class PartyWorksRoom<
     });
   }
 
-  //lol we need to add the funcitonality to stop reconnecting on a client side close
   disConnect() {
     this._partySocket.close();
   }
 
   _message() {
-    //for better typescript support
-    // const emit = this.emit as PartyWorksClient<InternalListenersMap>["emit"];
-
-    this.on(InternalListeners.Message, (data) => {});
     this._partySocket.eventHub.messages.subscribe((e) => {
       //this handler is always called, as it is a basic all message event handler
-      // this.emit(InternalListeners.Message, e);
-
       this.eventHub.allMessages.notify(e);
 
       try {
@@ -282,7 +247,6 @@ export class PartyWorksRoom<
                 event: { type: "set" },
               });
               this.eventHub.self.notify(this._self.current);
-              // this.emit("roomUpdate", { data: { others: this._peers.current } });
               break;
             }
 
@@ -293,7 +257,6 @@ export class PartyWorksRoom<
                 others: this._peers.current,
                 event: { type: "enter", other: peer },
               });
-              // this.emit("userJoined", { peer: data.data });
               break;
             }
 
@@ -307,7 +270,6 @@ export class PartyWorksRoom<
                 });
               }
 
-              // this.emit("userleft", { peer: data.data });
               break;
             }
 
@@ -332,7 +294,6 @@ export class PartyWorksRoom<
                     other: peer,
                   },
                 });
-              // this.emit("peersUpdate", {});
               break;
             }
 
@@ -368,7 +329,6 @@ export class PartyWorksRoom<
                     (user) => user.userId === data.data.userId
                   ) || null,
               });
-              // this.emit("broadcast", {});
               break;
             }
 
@@ -381,20 +341,6 @@ export class PartyWorksRoom<
 
         //notify the listener
         this.eventHub.message.notify(e);
-
-        //? now i'm somewhat not sure, if the custom events should have an internal event for it
-        //? or we going the route of eventHandler
-        //? i think event handler is making more visual sense, since it's easir in terms of async/await :/.
-        //? huh not sure, let's see
-        //if we don't have a registered listener for this event
-
-        //?ok so we ignore error if it has rid, so it can be handeled by the emitAwait handler
-        //?if the error has event property user can get it as useError("event", () => {})
-        //?if the error doesnot has event, user can get it as useError("error", () => {})
-        //?lastly users can also get the useError("all") for all three
-
-        //? should be provide it as onError on room ?
-        //? .onError("error", () => {})
 
         //ok new logic let's diff events & errors
         if (parsedData.error) {
@@ -475,8 +421,6 @@ export class PartyWorksRoom<
         )
       );
     }
-
-    // this.emit("presenceUpdate", data);
   };
 
   broadcast = (data: TBroadcastEvent) => {
@@ -490,15 +434,6 @@ export class PartyWorksRoom<
     this._partySocket.send(dataToSend);
   }
 
-  //? ok so not sure what to do with this
-  //? since we're gonna have throttles, buffers
-  //? in case the state is disconnected, do we reject it outright
-  //? do we wait the normal period in case the socket get's connected, but that will leave premature rejects
-  //? do we start counting when the request is sent :/ it can take lot of time
-  //? so sort of noop?
-  //? so in a way it's the most experimental thing in this entire framework, it'll take some time to get this right
-  //? maybe the simplest of all, just let the users implement this lol. we give the .on so should be doable
-  //? ohh no wait we don't really expose or suggest using partysocket directly so, hmm. maybe?
   emitAwait<K extends keyof TEventsEmit = keyof TEventsEmit>(
     {
       event,
@@ -575,9 +510,6 @@ export class PartyWorksRoom<
     return this._partySocket.getStatus();
   };
 
-  //this should make up to be the individual es
-  //a single subscribe is beeter than
-  //todo add a single subscribe for javascript folks
   subscribe<
     K extends keyof RoomEventSubscriberMap<
       TPresence,
