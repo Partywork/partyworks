@@ -550,7 +550,9 @@ export class PartyWorksRoom<
   };
 
   getStatus = () => {
-    return this._partySocket.getStatus();
+    const status = this._partySocket.getStatus();
+    //! for ssr, if initial is returned, then on client hydration there will be text missmatch
+    return status === "initial" ? "connecting" : status;
   };
 
   subscribe<
