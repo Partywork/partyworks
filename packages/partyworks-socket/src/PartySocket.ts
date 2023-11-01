@@ -562,9 +562,9 @@ export class PartySocket {
     }
 
     const retryTime =
-      typeof this.options.config!.connectionBackoff![this.authRetry] ===
+      typeof this.options.config!.connectionBackoff![this.connRetry] ===
       "number"
-        ? this.options.config!.connectionBackoff![this.authRetry]
+        ? this.options.config!.connectionBackoff![this.connRetry]
         : 5000;
 
     setTimeout(() => {
