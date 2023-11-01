@@ -10,7 +10,7 @@ import {
   PartyworksEvents,
 } from "partyworks-shared";
 import { ImmutableObject } from "../immutables/ImmutableObject";
-import type { Peer, Self } from "../types";
+import { DEFAULT_LOSTCONNECTION_TIMEOUT, type Peer, type Self } from "../types";
 import { ImmutablePeers } from "../immutables/ImmutableOthers";
 import { PartyWorksEventSource } from "./EventSource";
 import { v4 as uuid } from "uuid";
@@ -62,6 +62,7 @@ type RoomEventSubscriberMap<TPresence, TUserMeta, TBroadcastEvent> = {
   error: Subscribe<{ error: any; event?: string }>;
 
   status: Subscribe<PartySocketStatus>;
+  lostConnection: Subscribe<LostConnectionStatus>;
 };
 
 //i think for the internal events we can have rpc based format, but custom events can be tricky the ones that don't follow req/res format
@@ -109,6 +110,8 @@ export interface RoomBroadcastEventListener<
   userId: string;
 }
 
+export type LostConnectionStatus = "lost" | "failed" | "restored";
+
 export interface PartyWorksRoomOptions extends PartySocketOptions {
   lostConnectionTimeout?: number;
 }
@@ -125,7 +128,10 @@ export class PartyWorksRoom<
   private _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
   private _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
   private _peers: ImmutablePeers<TPresence, TUserMeta>;
-  private _lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
+  private _lostConnection: {
+    lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
+    didLoseConnection: boolean;
+  } = { didLoseConnection: false };
 
   private ridListeners = new SingleEventSource<
     Readonly<TEvents[keyof TEvents]>
@@ -145,12 +151,15 @@ export class PartyWorksRoom<
     >; //this is for broadcast api
     error: SingleEventSource<{ error: any; event?: string }>; //this is for event & non event based errors
     status: SingleEventSource<PartySocketConnectionState>;
+    lostConnection: SingleEventSource<LostConnectionStatus>;
   };
 
-  constructor(options: PartyWorksRoomOptions) {
+  constructor(private options: PartyWorksRoomOptions) {
     super();
 
     this._id = options.room;
+    this.options.lostConnectionTimeout =
+      this.options.lostConnectionTimeout ?? DEFAULT_LOSTCONNECTION_TIMEOUT;
 
     //we will start closed
     this._partySocket = new PartySocket({
@@ -168,6 +177,7 @@ export class PartyWorksRoom<
       event: new SingleEventSource(),
       error: new SingleEventSource(),
       status: this._partySocket.eventHub.status,
+      lostConnection: new SingleEventSource(),
     };
     this._message();
     this._peers = new ImmutablePeers();
@@ -184,9 +194,9 @@ export class PartyWorksRoom<
       this._partySocket.reconnect();
     }
     //TODO implement a proper connection state, and use it for tracking states &  bufffering
-    this._partySocket.eventHub.status.subscribe((status) => {
-      console.log(`socket status ${this._partySocket.getStatus()} [${status}]`);
-    });
+    // this._partySocket.eventHub.status.subscribe((status) => {
+    //   console.log(`socket status ${this._partySocket.getStatus()} [${status}]`);
+    // });
   }
 
   disConnect() {
@@ -494,10 +504,41 @@ export class PartyWorksRoom<
     });
   }
 
-  //todo
+  //todo refactor
   handleLostConnection = () => {
-    //we don't care for initial &
     const status = this._partySocket.getStatus();
+
+    if (status === "connected") {
+      clearTimeout(this._lostConnection.lostConnectionTimeout);
+      this._lostConnection.lostConnectionTimeout = undefined;
+      if (this._lostConnection.didLoseConnection) {
+        this._lostConnection.didLoseConnection = false;
+        this.eventHub.lostConnection.notify("restored");
+      }
+      return;
+    }
+
+    if (
+      status === "reconnecting" &&
+      !this._lostConnection.lostConnectionTimeout
+    ) {
+      if (!this._lostConnection.didLoseConnection)
+        this._lostConnection.lostConnectionTimeout = setTimeout(() => {
+          this._lostConnection.didLoseConnection = true;
+          this._lostConnection.lostConnectionTimeout = undefined;
+          this.eventHub.lostConnection.notify("lost");
+        }, this.options.lostConnectionTimeout);
+
+      return;
+    }
+
+    if (status === "disconnected") {
+      clearTimeout(this._lostConnection.lostConnectionTimeout);
+      this._lostConnection.lostConnectionTimeout = undefined;
+      this._lostConnection.didLoseConnection = false;
+      this.eventHub.lostConnection.notify("failed");
+      return;
+    }
   };
 
   getOthers = (): Peer<TPresence, TUserMeta>[] => {
@@ -532,33 +573,32 @@ export class PartyWorksRoom<
     callback: Subscribe<T>
   ): UnsubscribeListener {
     switch (event) {
-      case "allMessages": {
+      case "allMessages":
         return this.eventHub.allMessages.subscribe(callback as any);
-      }
-      case "message": {
+
+      case "message":
         return this.eventHub.message.subscribe(callback as any);
-      }
-      case "error": {
+
+      case "error":
         return this.eventHub.error.subscribe(callback as any);
-      }
-      case "event": {
+
+      case "event":
         return this.eventHub.event.subscribe(callback as any);
-      }
 
-      case "myPresence": {
+      case "myPresence":
         return this.eventHub.myPresence.subscribe(callback as any);
-      }
 
-      case "others": {
+      case "others":
         return this.eventHub.others.subscribe(callback as any);
-      }
 
-      case "self": {
+      case "self":
         return this.eventHub.self.subscribe(callback as any);
-      }
 
       case "status":
         return this.eventHub.status.subscribe(callback as any);
+
+      case "lostConnection":
+        return this.eventHub.lostConnection.subscribe(callback as any);
 
       default: {
         //? should we throw

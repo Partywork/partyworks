@@ -1,3 +1,5 @@
+export const DEFAULT_LOSTCONNECTION_TIMEOUT = 5000; //5sec
+
 export interface BaseUser {
   data: {
     id: string; //internal partykit id or something
