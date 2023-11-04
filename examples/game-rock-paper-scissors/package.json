@@ -1,0 +1,37 @@
+{
+  "name": "game-rock-paper-scissors",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:party": "partykit dev",
+    "dev:next": "next dev",
+    "dev": "concurrently npm:dev:*",
+    "deploy": "partykit deploy",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@cfworker/uuid": "^1.12.4",
+    "classnames": "^2.3.2",
+    "next": "14.0.0",
+    "partykit": "^0.0.32",
+    "partyworks-client": "^0.0.2",
+    "partyworks-react": "^0.0.2",
+    "partyworks-server": "^0.0.3",
+    "react": "^18",
+    "react-confetti": "^6.1.0",
+    "react-dom": "^18",
+    "react-icons": "^4.11.0",
+    "react-toastify": "^9.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "concurrently": "^8.2.2",
+    "eslint": "^8",
+    "eslint-config-next": "14.0.1",
+    "typescript": "^5"
+  }
+}

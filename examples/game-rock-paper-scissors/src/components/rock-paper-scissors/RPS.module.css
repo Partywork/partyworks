@@ -1,0 +1,371 @@
+/* RockPaperScissorsGame.module.css */
+
+.gameRootContainer {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+}
+
+.gameContainer {
+  display: flex;
+  height: 80%;
+  width: 100%;
+  position: relative; /* Add this to allow positioning children */
+  border-radius: 1rem;
+  overflow: hidden;
+  /* margin-top: ; */
+}
+
+.overlay {
+  height: 100%;
+  width: 100%;
+  z-index: 99;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+}
+
+.gamePlayers {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+}
+
+.roundInfo {
+  z-index: 9999;
+  align-self: center;
+  font-size: 4rem;
+  text-shadow: 2.5px 2.5px 2.5px #000;
+  animation: winAnimation 1s infinite alternate-reverse !important;
+}
+
+.options {
+  flex: 1;
+  width: 100%;
+  align-self: flex-end;
+  justify-self: center;
+  display: flex;
+  padding: 5rem;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.option {
+  border-radius: 1rem;
+  cursor: pointer;
+  padding: 1rem;
+  background-color: var(--bg-light-primary);
+}
+
+.optionSelected {
+  border: 1rem solid var(--primary-color);
+}
+
+.optionIcon {
+  height: 5rem;
+  width: 5rem;
+}
+
+.area {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  position: relative;
+}
+
+.playerArea,
+.opponentArea {
+  position: absolute;
+  height: 100%;
+  width: 56%;
+  overflow: hidden;
+  top: 0;
+  filter: brightness(98%);
+}
+
+.playerArea {
+  left: 0;
+  background-color: var(--game-blue-color); /* Player's area color */
+  clip-path: polygon(100% 0%, 78% 100%, 0% 100%, 0% 0%);
+}
+
+.opponentArea {
+  right: 0;
+  background-color: var(--danger-color); /* Opponent's area color */
+  clip-path: polygon(22% 0%, 0% 100%, 100% 100%, 100% 0%);
+}
+
+.confettiCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* HandAnimation.module.css */
+.handAnimation {
+  font-size: 5rem;
+  animation: tiltAnimation 2s infinite alternate-reverse; /* Add animation properties */
+}
+
+.handAnimationEnemy {
+  animation: tiltAnimationOpponent 2s infinite alternate-reverse; /* Add animation properties */
+}
+
+.handEnemy {
+  transform: scaleX(-1);
+  animation: tiltAnimationOpponent 3s infinite alternate-reverse;
+}
+
+.baseHand {
+  transform: scaleX(-1);
+  position: absolute;
+  top: 25%;
+  height: 30rem;
+  width: 30rem;
+}
+
+.hand {
+  left: 20%;
+}
+
+.handEnemy {
+  right: 20%;
+}
+
+.playersBox {
+  position: relative;
+  margin: 2rem 0;
+  background-color: var(--background-dark-primary);
+  padding: 0.5rem 0.25rem;
+  border-radius: 1rem;
+  min-width: 50%;
+}
+
+.players {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.playerContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.playerCard {
+  display: flex;
+  align-items: center;
+}
+
+.playerCardImgContainer {
+  position: relative;
+}
+
+.playerCardImg {
+  height: 5rem;
+  width: 5rem;
+  border-radius: 50rem;
+  padding: 0.5rem;
+  border: 2px solid var(--white-color);
+}
+
+.playerCardImgWin {
+  border: 2px solid var(--success-color);
+}
+
+.playerCardImgLose {
+  border: 2px solid var(--danger-color);
+}
+
+.crownImage {
+  position: absolute;
+  top: -3.5rem; /*adjust the position based on your design */
+  left: 0%;
+  transform: translateX(-50%) rotate(-25deg);
+  width: 4rem; /* adjust the size as needed */
+  height: 4rem;
+}
+
+.playerInfoCard {
+  display: flex;
+  flex-direction: column;
+  margin-left: 1.25rem;
+}
+
+.playerInfoContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.playerInfoUsername {
+  font-weight: 500;
+}
+
+.playeInfoRole {
+  font-size: 1.8rem;
+}
+.settingsDropdown {
+  position: absolute;
+  right: 15px;
+  z-index: 12;
+}
+
+.winAnimation {
+  animation: winAnimation 1s infinite alternate-reverse !important;
+}
+
+.winAnimationEnemy {
+  animation: winAnimationEnemy 1s infinite alternate-reverse !important;
+}
+/* .handAnimation {
+  font-size: 5rem;
+  animation: winAnimation 1s infinite;
+} */
+
+@keyframes winAnimation {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+@keyframes winAnimationEnemy {
+  0%,
+  100% {
+    transform: scaleX(-1) scale(1);
+  }
+  50% {
+    transform: scaleX(-1) scale(1.25);
+  }
+}
+
+@keyframes tiltAnimation {
+  0% {
+    transform: rotate(0deg);
+  }
+  10% {
+    transform: rotate(16deg);
+  }
+  20% {
+    transform: rotate(-6deg);
+  }
+  30% {
+    transform: rotate(16deg);
+  }
+  40% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  70% {
+    transform: rotate(14deg);
+  }
+  85% {
+    transform: rotate(-6deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes tiltAnimationOpponent {
+  0% {
+    transform: scaleX(-1) rotate(0deg);
+  }
+  10% {
+    transform: scaleX(-1) rotate(-16deg);
+  }
+  20% {
+    transform: scaleX(-1) rotate(6deg);
+  }
+  30% {
+    transform: scaleX(-1) rotate(-16deg);
+  }
+  40% {
+    transform: scaleX(-1) rotate(4deg);
+  }
+  50% {
+    transform: scaleX(-1) rotate(-16deg);
+  }
+  60% {
+    transform: scaleX(-1) rotate(4deg);
+  }
+  70% {
+    transform: scaleX(-1) rotate(-14deg);
+  }
+  85% {
+    transform: scaleX(-1) rotate(6deg);
+  }
+  100% {
+    transform: scaleX(-1) rotate(0deg);
+  }
+}
+
+@media (max-width: 992px) {
+  .playersBox {
+    min-width: 80%;
+  }
+}
+
+@media (max-width: 1250px) {
+  .baseHand {
+    width: 25rem;
+    height: 25rem;
+  }
+}
+
+@media (max-width: 1150px) {
+  .baseHand {
+    width: 21.5rem;
+    height: 21.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .baseHand {
+    width: 20rem;
+    height: 20rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .playersBox {
+    min-width: 95%;
+  }
+  .baseHand {
+    width: 15rem;
+    height: 15rem;
+    top: 35%;
+  }
+
+  .hand {
+    left: 7%;
+  }
+
+  .handEnemy {
+    right: 7%;
+  }
+
+  .roundInfo {
+    font-size: 3rem;
+  }
+}
+
+/* 576) {
+        newBreakpoint = BreakpointType.Small;
+      } else if (width < 768) {
+        newBreakpoint = BreakpointType.Medium;
+      } else if (width < 992 */

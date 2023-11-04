@@ -1,0 +1,26 @@
+.rootContainer {
+  height: 100dvh;
+  display: flex;
+}
+
+.gameViewContainer {
+  flex: 1;
+}
+
+.chatsAndPlayersContainer {
+  width: 30rem;
+  max-width: 40rem;
+  padding: 1rem;
+}
+
+@media (max-width: 1250px) {
+  .chatsAndPlayersContainer {
+    max-width: 25rem;
+  }
+}
+
+@media (max-width: 850px) {
+  .chatsAndPlayersContainer {
+    display: none;
+  }
+}
