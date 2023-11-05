@@ -20,7 +20,9 @@
     "partyworks-react": "^0.0.2",
     "partyworks-server": "^0.0.3",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-icons": "^4.11.0",
+    "react-toastify": "^9.1.3"
   },
   "devDependencies": {
     "@types/node": "^20",
