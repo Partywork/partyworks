@@ -1,0 +1,19 @@
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+.dropdownContentItem {
+  color: var(--primary-text-dark);
+  font-weight: bold;
+  overflow: hidden;
+  padding: 1.2rem 1.6rem;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+}
+
+.dropdownContentItem:hover {
+  background-color: var(--secondary-text-light);
+  border-radius: 1rem;
+  border-top-right-radius: 0;
+}

@@ -1,0 +1,138 @@
+.rootContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2.5rem;
+}
+
+.connect4Container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 5rem;
+  height: 100%;
+}
+
+.connect4 {
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  grid-template-columns: repeat(
+    7,
+    8rem
+  ); /* Adjust the number of columns as needed */
+  gap: 1.5rem;
+  background-color: #3498db; /* Board background color */
+  padding: 1.5rem;
+  border-radius: 2rem;
+  cursor: pointer;
+  background-color: var(--background-dark-secondary);
+  margin-top: 2.5rem;
+}
+
+.cell {
+  width: 7rem;
+  height: 7rem;
+  background-color: rgb(201, 201, 201); /* Cell color */
+  border-radius: 50%;
+  margin-bottom: 2rem;
+  animation: scaleAnimation 0.8s;
+}
+
+.token {
+  height: 100%;
+  width: 100%;
+  border-radius: 5rem;
+}
+
+.hovered-row {
+  /* color: rgb(80, 42, 42); */
+  background-color: rgba(0, 0, 0, 0.2); /* Adjust the color as needed */
+}
+
+.tokenIndicator {
+  height: 100%;
+  width: 100%;
+  border-radius: 5rem;
+  opacity: 0.75;
+}
+
+@keyframes scaleAnimation {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  25% {
+    transform: scale(1.2);
+  }
+
+  50% {
+    transform: scale(1);
+  }
+
+  75% {
+    transform: scale(1.1);
+  }
+}
+
+@media (max-width: 1150px) {
+  .cell {
+    width: 6rem;
+    height: 6rem;
+  }
+
+  .connect4 {
+    grid-template-columns: repeat(
+      7,
+      6rem
+    ); /* Adjust the number of columns as needed */
+    gap: 15px;
+  }
+}
+
+@media (max-width: 630px) {
+  .cell {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .connect4 {
+    grid-template-columns: repeat(
+      7,
+      4rem
+    ); /* Adjust the number of columns as needed */
+    gap: 15px;
+  }
+}
+
+@media (max-width: 420px) {
+  .cell {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .connect4 {
+    grid-template-columns: repeat(
+      7,
+      3.5rem
+    ); /* Adjust the number of columns as needed */
+    gap: 10px;
+  }
+}
+
+@media (max-width: 320px) {
+  .cell {
+    width: 3rem;
+    height: 3rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .connect4 {
+    grid-template-columns: repeat(
+      7,
+      3rem
+    ); /* Adjust the number of columns as needed */
+    gap: 5px;
+  }
+}

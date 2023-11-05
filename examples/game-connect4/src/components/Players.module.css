@@ -1,0 +1,20 @@
+.container {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.userContainer {
+  display: flex;
+  align-items: center;
+}
+
+.userProfileImg {
+  height: 5rem;
+  border-radius: 10rem;
+  border: 2.5px solid var(--primary-color);
+  margin: 1rem 0;
+  margin-right: 1rem;
+}
+.userProfileName {
+  font-size: 2rem;
+}
