@@ -1,0 +1,5 @@
+{
+  "name": "partyworks-connect4-example",
+  "main": "party/index.ts",
+  "port": 1999
+}

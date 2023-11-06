@@ -1,0 +1,139 @@
+.playersBox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  margin: 2.5rem 0;
+  background-color: var(--primary-color);
+  padding: 0.5rem 0.25rem;
+  border-radius: 1rem;
+  color: var(--light-text-1);
+}
+
+.playerContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.playerTurnContainer {
+  font-size: 1.8rem;
+  font-weight: bold;
+  align-self: center;
+  text-transform: uppercase;
+}
+
+.playerCard {
+  display: flex;
+  align-items: center;
+}
+
+.playerCardImgContainer {
+  position: relative;
+}
+
+.playerCardImg {
+  height: 5rem;
+  width: 5rem;
+  border-radius: 50rem;
+  padding: 0.5rem;
+  border: 2px solid white;
+}
+
+.playerCardImgWin {
+  border: 2px solid var(--success-color);
+}
+
+.playerCardImgLose {
+  border: 2px solid var(--danger-color);
+}
+
+.crownImage {
+  position: absolute;
+  top: -3.5rem; /*adjust the position based on your design */
+  left: 0%;
+  transform: translateX(-50%) rotate(-25deg);
+  width: 4rem; /* adjust the size as needed */
+  height: 4rem;
+}
+
+.playerInfoCard {
+  display: flex;
+  flex-direction: column;
+  margin-left: 1.2rem;
+}
+
+.playerInfoContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.playerInfoUsername {
+  font-weight: 500;
+  font-size: 2.5rem;
+}
+
+.playeInfoRole {
+  font-size: 2.2rem;
+}
+
+.cell {
+  height: 2.5rem;
+  width: 2.5rem;
+  border: 1px solid white;
+  border-radius: 500rem;
+  margin: 0.25rem 0;
+}
+
+.blueCell {
+  background-color: var(--game-blue-color);
+}
+
+.redCell {
+  background-color: var(--danger-color);
+}
+
+.settingsDropdown {
+  position: absolute;
+  right: 15px;
+  z-index: 12;
+}
+
+@media (max-width: 420px) {
+  .playerInfoUsername {
+    font-size: 1.5rem;
+  }
+
+  .playeInfoRole {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .playerTurnContainer {
+    font-size: 1.5rem;
+  }
+
+  .playerInfoCard {
+    display: flex;
+    flex-direction: column;
+    margin-left: 0.5rem;
+  }
+
+  .playerCardImg {
+    height: 4.5rem;
+    width: 4.5rem;
+    border-radius: 50rem;
+    padding: 0.5rem;
+    border: 2px solid white;
+  }
+}
+
+/* Media query for mobile screens */
+@media (max-width: 768px) {
+  .settingsDropdown {
+    top: auto;
+  }
+}
