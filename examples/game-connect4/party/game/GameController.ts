@@ -21,7 +21,7 @@ import {
   GameStatus,
   PartyPlayer,
 } from "../types";
-import { Connect4Game } from './Connect4'
+import { Connect4Game } from "./Connect4";
 
 // Define an interface for the game class type
 interface GameHandlerConstructor<T extends GameHandler> {
@@ -30,7 +30,7 @@ interface GameHandlerConstructor<T extends GameHandler> {
 
 // Create the gamesMap with correct type annotations
 const gamesMap: Record<string, GameHandlerConstructor<GameHandler>> = {
-  "rock-paper-scissors": Connect4Game,
+  connect4: Connect4Game,
 };
 
 export class GameController {
@@ -50,7 +50,7 @@ export class GameController {
 
     const game: Game = {
       id: uuid(),
-      gameId: "rock-paper-scissors", //hardcoding for now, since it's the only game available
+      gameId: "connect4", //hardcoding for now, since it's the only game available
       gameStatus: GameStatus.CREATED,
       createdBy: { userId: player.id },
       players: [
