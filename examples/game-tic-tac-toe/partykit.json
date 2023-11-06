@@ -1,5 +1,5 @@
 {
-  "name": "partyworks-connect4-example",
+  "name": "partyworks-tic-tac-toe-example",
   "main": "party/index.ts",
   "port": 1999
 }
