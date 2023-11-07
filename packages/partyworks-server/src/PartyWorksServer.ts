@@ -17,31 +17,6 @@ type CustomEvents<TEvents, TState> = {
 
 const noop = () => {};
 
-//ok so this pattern is a little bit more strict
-//this can be annoying for some users dx wise as they just want typesafety in terms of messages
-//this can inversely lead to bad dx and alot of duplicated code in cases that send same messages over different events
-//but this is also the best in terms of type safety, lol even event safety
-//aaaaghhh dunno, i want this one particularly for my funrooms version tough!
-// export abstract class sq<
-//   TState = any,
-//   TEventsListener extends Record<string, any> = {},
-//   TEventEmitters extends Record<
-//     keyof TEventsListener,
-//     { sends: any; broadcasts: any }
-//   > = any,
-//   TBroadcasts = any
-// > {}
-
-//todo maybe in future we can get more granular
-//like having multiple options for send & broadcast on a per event level, that'll likely save many things
-
-//todo remove one of the implementations for player.sendData vs this.send & partyworks.broadcastData vs this.broadcast
-//well most likely player.sendData & partyworks.broadcastData are gonna be removed, since they funky :>
-
-//a bot/server user api
-//create a bot [likkely on setup]
-//connect the bot
-
 export abstract class PartyWorks<
   TState = any,
   TEventsListener extends Record<string, any> = {},
@@ -50,13 +25,6 @@ export abstract class PartyWorks<
   TPresence = any
 > implements Party.Server
 {
-  readonly partyworks: Party.Party & {
-    broadcastData: <K extends keyof TBroadcasts>(
-      event: K,
-      data: TBroadcasts[K]
-    ) => void;
-  };
-
   private players: Player<TState, TEventEmitters, TPresence>[] = [];
 
   private bots: Bot<TState, TPresence>[] = [];
@@ -65,19 +33,6 @@ export abstract class PartyWorks<
     {} as CustomEvents<TEventsListener, TState>;
 
   constructor(readonly party: Party.Party) {
-    this.partyworks = party as any;
-
-    //todo remove this, i personally don't like this api, kinda hacky, this.broadcast works fine
-    this.partyworks.broadcastData = (event, data) => {
-      try {
-        const stringifiedData = JSON.stringify({ event, data });
-
-        this.party.broadcast(stringifiedData);
-      } catch (error) {
-        console.log(`error broadcasting data`);
-      }
-    };
-
     //setup custom events and other things, that you want to run in constrcutor
     this.setCustomEvent();
     this.setup();
@@ -203,20 +158,6 @@ export abstract class PartyWorks<
 
     const roomData = this.roomState();
 
-    //todo remove this, this api gives sendData to player/cconnection itself, i feel this.send is a much better and cleaner api
-    connection.sendData = <K extends keyof TEventEmitters>(
-      event: K,
-      data: TEventEmitters[K]
-    ) => {
-      try {
-        const stringifiedData = JSON.stringify({ event, data });
-
-        connection.send(stringifiedData);
-      } catch (error) {
-        console.log(`error sending data`);
-      }
-    };
-
     //send internal connect message & roomState
     // connection.send(JSON.stringify(MessageBuilder.connect(connection, data)));
     connection.send(
@@ -276,9 +217,6 @@ export abstract class PartyWorks<
     }
   }
 
-  //? sendAwait function :/ . huh dunno how we can do anything bout this one
-  //todo allow to send eventless messages, since rid is the king, eventListerers will be based on rids for emitAwait rid events
-  //huh so we want eventless messages, umm, what should be do about the typescript then
   sendAwait<K extends keyof TEventEmitters>(
     connection: Party.Connection,
     data:
