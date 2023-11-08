@@ -1,6 +1,6 @@
 export enum PartyworksEvents {
-  //* Connection
-  CONNECT = 0, //SERVER ONLY
+  //* Batching
+  BATCH = 0, //batched messages
 
   //* Presence Types
   USER_JOINED = 1, //whe  a user joins the room
@@ -17,3 +17,5 @@ export enum PartyworksEvents {
   PRESENSE_UPDATE = 300, //when a user sends a presense update event
   USERMETA_UPDATE = 301, //when the server updates a user's meta
 }
+
+export const PARTYWORKS_UNDEFINED_PLACEHOLDER = "_";

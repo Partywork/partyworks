@@ -23,7 +23,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "pub": "npm version patch  && npm run build &&  npm publish"
+    "pub": "npm version patch  && npm run build &&  npm publish",
+    "test:watch": "jest --watchAll --no-cache --detectOpenHandles"
   },
   "keywords": [
     "partyworks",
@@ -32,5 +33,9 @@
     "websocket"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1"
+  }
 }
