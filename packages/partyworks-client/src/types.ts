@@ -1,4 +1,5 @@
 export const DEFAULT_LOSTCONNECTION_TIMEOUT = 5000; //5sec
+export const DEFAULT_THROTTLE_DELAY = 16; //16 milisec
 
 export interface BaseUser {
   data: {

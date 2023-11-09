@@ -8,13 +8,25 @@ import {
   SingleEventSource,
   type UnsubscribeListener,
   PartyworksEvents,
+  PartyworksParse,
+  PartyworksStringify,
 } from "partyworks-shared";
 import { ImmutableObject } from "../immutables/ImmutableObject";
-import { DEFAULT_LOSTCONNECTION_TIMEOUT, type Peer, type Self } from "../types";
+import {
+  DEFAULT_LOSTCONNECTION_TIMEOUT,
+  DEFAULT_THROTTLE_DELAY,
+  type Peer,
+  type Self,
+} from "../types";
 import { ImmutablePeers } from "../immutables/ImmutableOthers";
 import { PartyWorksEventSource } from "./EventSource";
 import { v4 as uuid } from "uuid";
-import { MessageBuilder } from "./MessageBuilder";
+import {
+  BroadcastMessage,
+  EmitMessage,
+  MessageBuilder,
+  PresenceUpdateMessage,
+} from "./MessageBuilder";
 
 type EmitAwaiOptions = {
   listenEvent?: string;
@@ -114,6 +126,7 @@ export type LostConnectionStatus = "lost" | "failed" | "restored";
 
 export interface PartyWorksRoomOptions extends PartySocketOptions {
   lostConnectionTimeout?: number;
+  throttle?: number;
 }
 
 export class PartyWorksRoom<
@@ -132,6 +145,19 @@ export class PartyWorksRoom<
     lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
     didLoseConnection: boolean;
   } = { didLoseConnection: false };
+
+  //throttling;
+  private _throttleInfo: {
+    lastSentMessage: number;
+    throttleFlushTimeout?: NodeJS.Timeout;
+  } = { lastSentMessage: 0 };
+
+  //buffering
+  private _buffer: {
+    presence?: PresenceUpdateMessage;
+    broadcasts: BroadcastMessage[];
+    messages: EmitMessage[];
+  } = { messages: [], broadcasts: [] };
 
   private ridListeners = new SingleEventSource<
     Readonly<TEvents[keyof TEvents]>
@@ -160,6 +186,7 @@ export class PartyWorksRoom<
     this._id = options.room;
     this.options.lostConnectionTimeout =
       this.options.lostConnectionTimeout ?? DEFAULT_LOSTCONNECTION_TIMEOUT;
+    this.options.throttle = this.options.throttle ?? DEFAULT_THROTTLE_DELAY;
 
     //we will start closed
     this._partySocket = new PartySocket({
@@ -167,6 +194,9 @@ export class PartyWorksRoom<
     });
 
     this._partySocket.eventHub.status.subscribe(this.handleLostConnection);
+    this._partySocket.eventHub.status.subscribe(
+      (status) => status === "connected" && this.tryFlush() //tries a flush immediately on connecton/reconnection
+    );
 
     this.eventHub = {
       allMessages: new SingleEventSource(),
@@ -183,33 +213,13 @@ export class PartyWorksRoom<
     this._peers = new ImmutablePeers();
   }
 
-  get id() {
-    return this._id;
-  }
-
-  connect() {
-    if (!this._partySocket.started) {
-      this._partySocket.start();
-    } else {
-      this._partySocket.reconnect();
-    }
-    //TODO implement a proper connection state, and use it for tracking states &  bufffering
-    // this._partySocket.eventHub.status.subscribe((status) => {
-    //   console.log(`socket status ${this._partySocket.getStatus()} [${status}]`);
-    // });
-  }
-
-  disConnect() {
-    this._partySocket.close();
-  }
-
-  _message() {
+  private _message() {
     this._partySocket.eventHub.messages.subscribe((e) => {
       //this handler is always called, as it is a basic all message event handler
       this.eventHub.allMessages.notify(e);
 
       try {
-        const parsedData = JSON.parse(e.data);
+        const parsedData = PartyworksParse(e.data);
 
         if (
           !parsedData ||
@@ -345,7 +355,8 @@ export class PartyWorksRoom<
             }
 
             default: {
-              console.error(`unknown evemt`);
+              //should never happen, since all the message have _pwf : "-1" flag
+              console.error(`unknown event`, data);
             }
           }
           return;
@@ -410,6 +421,85 @@ export class PartyWorksRoom<
     });
   }
 
+  //converts the buffer into a single array
+  private serializeBuffer = () => {
+    const messages: any[] = [];
+
+    if (this._buffer.presence) {
+      messages.push(this._buffer.presence);
+    }
+
+    for (let message of this._buffer.broadcasts) {
+      messages.push(message);
+    }
+
+    for (let message of this._buffer.messages) {
+      messages.push(message);
+    }
+
+    return messages;
+  };
+
+  private tryFlush = (selfCalled?: boolean) => {
+    //do nothing if not connected, flush will be called onConnect anyways
+    if (this._partySocket.getStatus() !== "connected") {
+      //but if there is already a timeout, and this is self called  removed it
+      if (selfCalled) this._throttleInfo.throttleFlushTimeout = undefined;
+      return;
+    }
+
+    //get the elapsedTime
+    const elapsedTime = Date.now() - this._throttleInfo.lastSentMessage;
+
+    //return if a flush is scheduled
+    if (!selfCalled && this._throttleInfo.throttleFlushTimeout) return;
+
+    //if we're early
+    if (
+      this._throttleInfo.lastSentMessage &&
+      elapsedTime < this.options.throttle!
+    ) {
+      //schedule a flush
+      this._throttleInfo.throttleFlushTimeout = setTimeout(
+        () => this.tryFlush(true),
+        this.options.throttle! - elapsedTime
+      );
+    } else {
+      //flush
+      const messages = this.serializeBuffer();
+
+      //reset throttle
+      this._throttleInfo.lastSentMessage = Date.now();
+      this._throttleInfo.throttleFlushTimeout = undefined;
+
+      //no updates just return
+      if (messages.length < 1) return;
+
+      this._partySocket.send(
+        PartyworksStringify(MessageBuilder.batchUpdateMessage(messages))
+      );
+
+      //empty the buffer
+      this._buffer = { presence: undefined, broadcasts: [], messages: [] };
+    }
+  };
+
+  get id() {
+    return this._id;
+  }
+
+  connect() {
+    if (!this._partySocket.started) {
+      this._partySocket.start();
+    } else {
+      this._partySocket.reconnect();
+    }
+  }
+
+  disConnect() {
+    this._partySocket.close();
+  }
+
   updatePresence: UpdateMyPresence<TPresence> = (
     data: TPresence | Partial<TPresence>,
     type: "partial" | "set" = "partial"
@@ -420,30 +510,40 @@ export class PartyWorksRoom<
 
     if (this._self) {
       if (type === "partial") {
-        this._self?.partialSet("presence", data);
+        this._self.partialSet("presence", data);
       } else {
-        this._self?.set({ presence: data as TPresence });
+        this._self.set({ presence: data as TPresence });
       }
       this.eventHub.myPresence.notify(this._self?.current.presence!);
       this.eventHub.self.notify(this._self.current!);
-      this._partySocket.send(
-        JSON.stringify(
-          MessageBuilder.updatePresenceMessage({ data, type }),
-          (k, v) => (v === undefined ? null : v) //we replace undefined with null, since stringify removes undefined props
-        )
-      );
+
+      if (!this._buffer.presence) {
+        this._buffer.presence = MessageBuilder.updatePresenceMessage({
+          data,
+          type,
+        });
+      } else {
+        //if presence is already present,
+        this._buffer.presence = MessageBuilder.updatePresenceMessage({
+          //todo add proper merger
+          data: { ...this._buffer.presence.data.data, ...data },
+          type,
+        });
+      }
+
+      this.tryFlush();
     }
   };
 
   broadcast = (data: TBroadcastEvent) => {
-    this._partySocket.send(
-      JSON.stringify(MessageBuilder.broadcastMessage(data))
-    );
+    this._buffer.broadcasts.push(MessageBuilder.broadcastMessage(data));
+    this.tryFlush();
   };
 
   emit<K extends keyof TEventsEmit>(event: K, data: TEventsEmit[K]): void {
-    const dataToSend = JSON.stringify(MessageBuilder.emitMessage(event, data));
-    this._partySocket.send(dataToSend);
+    //todo ability to add a custom batcher, ? per message or per flush ?
+    this._buffer.messages.push(MessageBuilder.emitMessage(event, data));
+    this.tryFlush();
   }
 
   emitAwait<K extends keyof TEventsEmit = keyof TEventsEmit>(
@@ -490,7 +590,8 @@ export class PartyWorksRoom<
       }, 5000);
 
       try {
-        const stringifiedObjectResponse = JSON.stringify(
+        //? do we use our Partyworks stringify here as well?
+        const stringifiedObjectResponse = PartyworksStringify(
           MessageBuilder.emitAwaitMessage({ event, data, rid: requestId })
         );
 
@@ -505,7 +606,7 @@ export class PartyWorksRoom<
   }
 
   //todo refactor
-  handleLostConnection = () => {
+  private handleLostConnection = () => {
     const status = this._partySocket.getStatus();
 
     if (status === "connected") {
