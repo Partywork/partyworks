@@ -1,5 +1,9 @@
 import type * as Party from "partykit/server";
-import { PartyworksEvents, PartyworksParse } from "partyworks-shared";
+import {
+  PartyworksEvents,
+  PartyworksParse,
+  mergerPartial,
+} from "partyworks-shared";
 import { Bot, BotOptions, Player } from "./types";
 import { MessageBuilder } from "./MessageBuilder";
 import { MessageEvent } from "@cloudflare/workers-types";
@@ -91,18 +95,12 @@ export abstract class PartyWorks<
           if (!this._validatePresenceMessage(parsedData.data)) return;
           if (!this.validatePresence(conn, parsedData.data)) return;
 
-          if (parsedData.data.type === "set") {
-            conn.presence = parsedData.data.data;
-          } else if (parsedData.data.data) {
-            //todo implement proper merging, at sub field levels as well
-            conn.presence = { ...conn.presence, ...parsedData.data.data };
-          }
-
-          //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
-          this.party.broadcast(
-            PartyworksStringify(MessageBuilder.presenceUpdate(conn)),
+          this._updatePresence(
+            conn,
+            { presence: parsedData.data.data, type: parsedData.data.type },
             [conn.id]
           );
+
           break;
         }
 
@@ -157,6 +155,27 @@ export abstract class PartyWorks<
         }
       }
     } catch (error) {}
+  }
+
+  private _updatePresence(
+    conn: Player | Bot,
+    presenceUpdate: { presence: any; type: any },
+    ignore?: string[]
+  ) {
+    if (presenceUpdate.type === "set") {
+      conn.presence = presenceUpdate.presence;
+    } else if (presenceUpdate.presence) {
+      conn.presence = mergerPartial(
+        { ...conn.presence },
+        { ...presenceUpdate.presence }
+      );
+    }
+
+    //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
+    this.party.broadcast(
+      PartyworksStringify(MessageBuilder.presenceUpdate(conn)),
+      ignore
+    );
   }
 
   //*-----------------------------------
@@ -323,17 +342,7 @@ export abstract class PartyWorks<
       | { presence: TPresence; type: "set" }
   ) {
     const player = conn as Player<any, any, TPresence>; //TYPECASTING :/
-
-    if (type === "set") {
-      player.presence = presence;
-    } else {
-      player.presence = { ...player.presence, ...presence };
-    }
-
-    //todo sending only partial updates maybe
-    this.party.broadcast(
-      PartyworksStringify(MessageBuilder.presenceUpdate(player))
-    );
+    this._updatePresence(player, { presence, type });
   }
 
   //ok how should we approach this
@@ -407,15 +416,7 @@ export abstract class PartyWorks<
     //? hmm, should we return a boolean or maybe throw an error ?
     if (!bot) return;
 
-    if (type === "set") {
-      bot.presence = presence as TPresence;
-    } else {
-      bot.presence = { ...bot.presence, ...presence };
-    }
-
-    this.party.broadcast(
-      PartyworksStringify(MessageBuilder.presenceUpdate(bot))
-    );
+    this._updatePresence(bot, { presence, type });
   }
 
   sendBotBroadcast(id: string, data: any, ignore?: string[]) {
