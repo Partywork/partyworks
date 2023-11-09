@@ -34,20 +34,19 @@ describe("test Immutable Object", () => {
     });
   });
 
-  it("partial set3", () => {
+  it("[current] partial set3", () => {
     const obj = new ImmutableObject<any>({
       test: "data",
       val: 0,
       arr: ["p", "a", "r", "t", "y"],
     });
 
-    //@ts-ignore
     obj.partialSet("arr", ["w", "o", "r", "k", "s"]);
 
     expect(obj.current).toStrictEqual({
       test: "data",
       val: 0,
-      arr: ["p", "a", "r", "t", "y", "w", "o", "r", "k", "s"],
+      arr: ["w", "o", "r", "k", "s"],
     });
   });
 
@@ -59,7 +58,6 @@ describe("test Immutable Object", () => {
       obj: { val1: "val1", val2: "val2" },
     });
 
-    //@ts-ignore
     obj.partialSet("obj", { val2: "new", val3: "new" });
 
     expect(obj.current).toStrictEqual({
@@ -67,6 +65,22 @@ describe("test Immutable Object", () => {
       val: 0,
       arr: ["p", "a", "r", "t", "y"],
       obj: { val1: "val1", val2: "new", val3: "new" },
+    });
+  });
+
+  it("partial set5", () => {
+    const obj = new ImmutableObject<any>({
+      data: { id: "bdd4adaa-0251-4809-9c0b-9c47b164adab" },
+      info: { color: "#FFF176" },
+      presence: { cursor: undefined },
+    });
+
+    obj.partialSet("presence", { cursor: { x: 10, y: 10 } });
+
+    expect(obj.current).toStrictEqual({
+      data: { id: "bdd4adaa-0251-4809-9c0b-9c47b164adab" },
+      info: { color: "#FFF176" },
+      presence: { cursor: { x: 10, y: 10 } },
     });
   });
 

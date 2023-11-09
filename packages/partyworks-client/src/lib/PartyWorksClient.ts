@@ -10,6 +10,7 @@ import {
   PartyworksEvents,
   PartyworksParse,
   PartyworksStringify,
+  mergerPartial,
 } from "partyworks-shared";
 import { ImmutableObject } from "../immutables/ImmutableObject";
 import {
@@ -514,7 +515,7 @@ export class PartyWorksRoom<
       } else {
         this._self.set({ presence: data as TPresence });
       }
-      this.eventHub.myPresence.notify(this._self?.current.presence!);
+      this.eventHub.myPresence.notify(this._self.current.presence!);
       this.eventHub.self.notify(this._self.current!);
 
       if (!this._buffer.presence) {
@@ -525,8 +526,10 @@ export class PartyWorksRoom<
       } else {
         //if presence is already present,
         this._buffer.presence = MessageBuilder.updatePresenceMessage({
-          //todo add proper merger
-          data: { ...this._buffer.presence.data.data, ...data },
+          data: mergerPartial(
+            { ...this._buffer.presence.data.data },
+            data as any
+          ),
           type,
         });
       }
