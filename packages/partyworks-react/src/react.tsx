@@ -108,14 +108,14 @@ export function createRoomContext<
   ): T | readonly Peer<TPresence, TUserMeta>[] {
     const room = useRoom();
 
-    const sub = room.eventHub.others.subscribe;
-    const snap = room.getOthers;
-    const emp = emptyOthers;
+    const subscribeFn = room.eventHub.others.subscribe;
+    const getSnapshot = room.getOthers;
+    const getServerSnapshot = emptyOthers;
 
     return useSyncExternalStoreWithSelector(
-      sub,
-      snap,
-      emp,
+      subscribeFn,
+      getSnapshot,
+      getServerSnapshot,
       selector || same,
       isEqual
     );
@@ -199,11 +199,11 @@ export function createRoomContext<
   function useSelf() {
     const room = useRoom();
 
-    const sub = room.eventHub.self.subscribe;
-    const snap = room.getSelf;
+    const subscribeFn = room.eventHub.self.subscribe;
+    const getSnapshot = room.getSelf;
     const getServerSnapshot = useCallback(() => undefined, []);
 
-    return useSyncExternalStore(sub, snap, getServerSnapshot);
+    return useSyncExternalStore(subscribeFn, getSnapshot, getServerSnapshot);
   }
 
   function useMyPresence(): [
@@ -212,11 +212,15 @@ export function createRoomContext<
   ] {
     const room = useRoom();
 
-    const sub = room.eventHub.myPresence.subscribe;
-    const snap = room.getPresence;
+    const subscribeFn = room.eventHub.myPresence.subscribe;
+    const getSnapshot = room.getPresence;
     const getServerSnapshot = useCallback(() => undefined, []);
 
-    const presence = useSyncExternalStore(sub, snap, getServerSnapshot);
+    const presence = useSyncExternalStore(
+      subscribeFn,
+      getSnapshot,
+      getServerSnapshot
+    );
     const updatePresence = room.updatePresence;
 
     return [presence, updatePresence];
@@ -255,11 +259,11 @@ export function createRoomContext<
   function useStatus() {
     const room = useRoom();
 
-    const sub = room.eventHub.status.subscribe;
-    const snap = room.getStatus;
+    const subscribeFn = room.eventHub.status.subscribe;
+    const getSnapshot = room.getStatus;
 
     //? should we add a selector,
-    return useSyncExternalStore(sub, snap, snap);
+    return useSyncExternalStore(subscribeFn, getSnapshot, getSnapshot);
   }
 
   function useLostConnectionListener(
