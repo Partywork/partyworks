@@ -1,8 +1,9 @@
 import type * as Party from "partykit/server";
-import { PartyworksEvents } from "partyworks-shared";
+import { PartyworksEvents, PartyworksParse } from "partyworks-shared";
 import { Bot, BotOptions, Player } from "./types";
 import { MessageBuilder } from "./MessageBuilder";
 import { MessageEvent } from "@cloudflare/workers-types";
+import { PartyworksStringify } from "partyworks-shared";
 
 type CustomEvents<TEvents, TState> = {
   [K in keyof Partial<TEvents>]: {
@@ -27,6 +28,7 @@ export abstract class PartyWorks<
 {
   private players: Player<TState, TEventEmitters, TPresence>[] = [];
 
+  //todo api to listen for server broadcast
   private bots: Bot<TState, TPresence>[] = [];
 
   private _customEvents: CustomEvents<TEventsListener, TState> =
@@ -42,6 +44,28 @@ export abstract class PartyWorks<
   //* Private Internal Methods, internal lib methods
   //*-----------------------------------
 
+  private parseAndRouteMessage(e: MessageEvent, conn: Player) {
+    try {
+      //parse the message, note: reverting the placeholder with undefined in json.parse removes the key
+      const parsedData = PartyworksParse(e.data as string);
+
+      // this is how we track internal vs user messages [_pwf flag value to be set "-1" for internal events]
+      // ok here internal events also mean custom events sent by user via the client's emit or emitAwait
+      if (
+        parsedData &&
+        typeof parsedData.event === "number" &&
+        parsedData._pwf === "-1"
+      ) {
+        this.handleEvents(parsedData, conn);
+
+        return;
+      }
+
+      console.log("unknown event");
+      console.log(parsedData);
+    } catch (error) {}
+  }
+
   //checks the correct data format
   //well may not be neccessare since the user can check, still
   private _validatePresenceMessage(data: any) {
@@ -51,85 +75,85 @@ export abstract class PartyWorks<
     return true;
   }
 
-  private handleEvents(e: MessageEvent, conn: Player) {
+  private handleEvents(parsedData: any, conn: Player) {
     try {
-      const parsedData = JSON.parse(e.data as string);
-
-      //todo, this is how we track internal vs user messages [_pwf flag value to be set "-1" for internal events]
-      //todo ok here internal events also mean custom events sent by user via the client's emit or emitAwait
-      if (parsedData.event && parsedData._pwf === "-1") {
-        switch (parsedData.event) {
-          case PartyworksEvents.PRESENSE_UPDATE: {
-            if (!this._validatePresenceMessage(parsedData.data)) return;
-            if (!this.validatePresence(conn, parsedData.data)) return;
-
-            if (parsedData.data.type === "set") {
-              conn.presence = parsedData.data.data;
-            } else if (parsedData.data.data) {
-              //todo listen for type 'set' | 'partial' fields as well
-              //todo implement proper merging, at sub field levels as well
-              conn.presence = { ...conn.presence, ...parsedData.data.data };
+      switch (parsedData.event) {
+        case PartyworksEvents.BATCH: {
+          if (Array.isArray(parsedData.data)) {
+            for (let event of parsedData.data) {
+              this.handleEvents(event, conn);
             }
+          }
+          break;
+        }
 
-            //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
-            this.party.broadcast(
-              JSON.stringify(MessageBuilder.presenceUpdate(conn)),
-              [conn.id]
-            );
-            break;
+        case PartyworksEvents.PRESENSE_UPDATE: {
+          if (!this._validatePresenceMessage(parsedData.data)) return;
+          if (!this.validatePresence(conn, parsedData.data)) return;
+
+          if (parsedData.data.type === "set") {
+            conn.presence = parsedData.data.data;
+          } else if (parsedData.data.data) {
+            //todo implement proper merging, at sub field levels as well
+            conn.presence = { ...conn.presence, ...parsedData.data.data };
           }
 
-          case PartyworksEvents.BROADCAST: {
-            if (!this.validateBroadcast(conn, parsedData.data)) return;
+          //ok maybe here we can do some ack, but presence is fire & forget, dunno :/
+          this.party.broadcast(
+            PartyworksStringify(MessageBuilder.presenceUpdate(conn)),
+            [conn.id]
+          );
+          break;
+        }
 
-            this.party.broadcast(
-              JSON.stringify(
-                MessageBuilder.broadcastEvent(conn, parsedData.data)
-              ),
-              [conn.id]
-            );
+        case PartyworksEvents.BROADCAST: {
+          if (!this.validateBroadcast(conn, parsedData.data)) return;
 
-            this.bots.forEach((bot) => bot.onBroadcast(conn, parsedData.data));
-            break;
-          }
+          this.party.broadcast(
+            PartyworksStringify(
+              MessageBuilder.broadcastEvent(conn, parsedData.data)
+            ),
+            [conn.id]
+          );
 
-          default: {
-            //now check for internal custom events
+          this.bots.forEach((bot) => bot.onBroadcast(conn, parsedData.data));
+          break;
+        }
 
-            const eventHandler = this._customEvents[parsedData.event];
+        default: {
+          //now check for internal custom events
 
-            if (eventHandler) {
-              try {
-                const { validator, handler } = eventHandler;
-                if (typeof validator === "function") {
-                  //? maybe we're expecting it to throw, or return false
-                  validator(parsedData.data);
-                }
+          const eventHandler = this._customEvents[parsedData.event];
 
-                //? here also if throws we can handle maybe based on event & rid
-                //?ok definitely makes sense to throw an error a default one & perhaps a custom one
-                handler(
-                  {
-                    data: parsedData.data,
-                    rid: parsedData.rid,
-                    event: parsedData.event,
-                  },
-                  conn
-                );
-
-                return;
-              } catch (error) {
-                //this should be safe, and should not throw any error, otherwise bad bad bad!
-                this.catchAll(error, parsedData, conn);
-
-                return;
+          if (eventHandler) {
+            try {
+              const { validator, handler } = eventHandler;
+              if (typeof validator === "function") {
+                //? maybe we're expecting it to throw, or return false
+                validator(parsedData.data);
               }
-            }
 
-            this.notFound(parsedData, conn);
-            console.log("unknown event");
-            console.log(parsedData);
+              //? here also if throws we can handle maybe based on event & rid
+              //?ok definitely makes sense to throw an error a default one & perhaps a custom one
+              handler(
+                {
+                  data: parsedData.data,
+                  rid: parsedData.rid,
+                  event: parsedData.event,
+                },
+                conn
+              );
+
+              return;
+            } catch (error) {
+              //this should be safe, and should not throw any error, otherwise bad bad bad!
+              this.catchAll(error, parsedData, conn);
+
+              return;
+            }
           }
+
+          this.notFound(parsedData, conn);
         }
       }
     } catch (error) {}
@@ -151,7 +175,7 @@ export abstract class PartyWorks<
   ) {
     this.customDataOnConnect(connection, ctx);
     connection.addEventListener("message", (e) => {
-      this.handleEvents(e, connection);
+      this.parseAndRouteMessage(e, connection);
     });
 
     this.players.push(connection);
@@ -161,7 +185,7 @@ export abstract class PartyWorks<
     //send internal connect message & roomState
     // connection.send(JSON.stringify(MessageBuilder.connect(connection, data)));
     connection.send(
-      JSON.stringify(
+      PartyworksStringify(
         MessageBuilder.roomState({
           //@ts-ignore , we will sync the info property if defined
           info: connection.state?.info! as any,
@@ -174,7 +198,7 @@ export abstract class PartyWorks<
 
     //notify everyone that the user has connected
     this.party.broadcast(
-      JSON.stringify(MessageBuilder.userOnline(connection)),
+      PartyworksStringify(MessageBuilder.userOnline(connection)),
       [connection.id]
     );
 
@@ -188,7 +212,7 @@ export abstract class PartyWorks<
     this.players = this.players.filter((con) => con.id !== connection.id);
 
     this.party.broadcast(
-      JSON.stringify(MessageBuilder.userOffline(connection))
+      PartyworksStringify(MessageBuilder.userOffline(connection))
     );
 
     //call the bot handlers
@@ -209,7 +233,9 @@ export abstract class PartyWorks<
     data: { event: K; data: TEventEmitters[K] }
   ) {
     try {
-      const stringifiedData = JSON.stringify(data);
+      const stringifiedData = PartyworksStringify(data, {
+        excludeUndefined: true,
+      });
 
       connection.send(stringifiedData);
     } catch (error) {
@@ -227,7 +253,12 @@ export abstract class PartyWorks<
     }
   ) {
     try {
-      const stringifiedData = JSON.stringify({ ...data, options });
+      const stringifiedData = PartyworksStringify(
+        { ...data, options },
+        {
+          excludeUndefined: true,
+        }
+      );
 
       connection.send(stringifiedData);
     } catch (error) {}
@@ -246,7 +277,10 @@ export abstract class PartyWorks<
     }
   ): void {
     try {
-      const stringifiedData = JSON.stringify({ ...data, options });
+      const stringifiedData = PartyworksStringify(
+        { ...data, options },
+        { excludeUndefined: true }
+      );
 
       connection.send(stringifiedData);
     } catch (error) {
@@ -260,7 +294,7 @@ export abstract class PartyWorks<
     ignored?: string[]
   ): void {
     try {
-      const stringifiedData = JSON.stringify(data);
+      const stringifiedData = PartyworksStringify(data);
 
       this.party.broadcast(stringifiedData, ignored);
     } catch (error) {
@@ -297,7 +331,9 @@ export abstract class PartyWorks<
     }
 
     //todo sending only partial updates maybe
-    this.party.broadcast(JSON.stringify(MessageBuilder.presenceUpdate(player)));
+    this.party.broadcast(
+      PartyworksStringify(MessageBuilder.presenceUpdate(player))
+    );
   }
 
   //ok how should we approach this
@@ -306,7 +342,7 @@ export abstract class PartyWorks<
   //well this is more llike broadcast userMeta at this point :/
   updateUserMeta(conn: Party.Connection) {
     this.party.broadcast(
-      JSON.stringify(MessageBuilder.metaUpdate(conn as Player))
+      PartyworksStringify(MessageBuilder.metaUpdate(conn as Player))
     );
   }
 
@@ -350,7 +386,7 @@ export abstract class PartyWorks<
     this.bots.push(bot);
 
     //notify everyone that the user has connected
-    this.party.broadcast(JSON.stringify(MessageBuilder.userOnline(bot)));
+    this.party.broadcast(PartyworksStringify(MessageBuilder.userOnline(bot)));
 
     return true;
   }
@@ -377,7 +413,9 @@ export abstract class PartyWorks<
       bot.presence = { ...bot.presence, ...presence };
     }
 
-    this.party.broadcast(JSON.stringify(MessageBuilder.presenceUpdate(bot)));
+    this.party.broadcast(
+      PartyworksStringify(MessageBuilder.presenceUpdate(bot))
+    );
   }
 
   sendBotBroadcast(id: string, data: any, ignore?: string[]) {
@@ -387,7 +425,7 @@ export abstract class PartyWorks<
     if (!bot) return;
 
     this.party.broadcast(
-      JSON.stringify(MessageBuilder.broadcastEvent(bot, data)),
+      PartyworksStringify(MessageBuilder.broadcastEvent(bot, data)),
       ignore
     );
   }

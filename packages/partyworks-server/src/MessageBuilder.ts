@@ -3,13 +3,6 @@ import { Bot, Player } from "./types";
 import type * as Party from "partykit/server";
 
 export class MessageBuilder {
-  static connect(player: Player, data: any) {
-    return {
-      event: PartyworksEvents.CONNECT,
-      data,
-    };
-  }
-
   static roomState({
     self,
     info,
