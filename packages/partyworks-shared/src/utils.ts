@@ -43,7 +43,6 @@ export const PartyworksParse = (data: string) => {
   //hmmm... me wondering the performance implications of this X
   //well maybe, jut maybe in fututre we cna have a custom binary protocol :) (devtools support would be necessary to ensure good dx, where the suers can see the incoming/outgoing messages decoded in a object form) (so likely gonna take some time to reach this)
   replaceUndefined(parsedData.data, parsedData.meta);
-
   return parsedData.data;
 };
 
@@ -56,31 +55,43 @@ export const PartyworksStringify = (
   if (options?.excludeUndefined) return JSON.stringify(data);
 
   const traverseAndStringify = (obj: any, path = "") => {
+    const newObj: any = Array.isArray(obj) ? [] : {};
+
     for (const key in obj) {
       const currentPath = path ? `${path}.${key}` : key;
-      const value = obj[key];
+      let value = obj[key];
 
       if (value === undefined) {
         placeholderKeys.push(currentPath);
-        obj[key] = PARTYWORKS_UNDEFINED_PLACEHOLDER;
+        value = PARTYWORKS_UNDEFINED_PLACEHOLDER;
       } else if (Array.isArray(value)) {
-        for (let i = 0; i < value.length; i++) {
-          if (value[i] === undefined) {
-            const arrayPath = `${currentPath}[${i}]`;
+        const arr = value.map((item: any, index: number) => {
+          if (item === undefined) {
+            const arrayPath = `${currentPath}[${index}]`;
             placeholderKeys.push(arrayPath);
-            obj[key][i] = PARTYWORKS_UNDEFINED_PLACEHOLDER;
-          } else if (typeof value[i] === "object" && value[i] !== null) {
-            traverseAndStringify(value[i], `${currentPath}[${i}]`);
+            return PARTYWORKS_UNDEFINED_PLACEHOLDER;
+          } else if (typeof item === "object" && item !== null) {
+            const newItem = traverseAndStringify(
+              item,
+              `${currentPath}[${index}]`
+            );
+            return newItem;
           }
-        }
+          return item;
+        });
+        value = arr;
       } else if (typeof value === "object" && value !== null) {
-        traverseAndStringify(value, currentPath);
+        value = traverseAndStringify(value, currentPath);
       }
+
+      newObj[key] = value;
     }
+
+    return newObj;
   };
 
-  traverseAndStringify(data);
-  return JSON.stringify({ data, meta: placeholderKeys, _pwf: "0" });
+  const newData = traverseAndStringify(data);
+  return JSON.stringify({ data: newData, meta: placeholderKeys, _pwf: "0" });
 };
 
 //partial merge util for presence

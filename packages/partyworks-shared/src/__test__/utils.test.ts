@@ -60,13 +60,13 @@ describe("test Serde", () => {
   });
 
   it("should parse & stringify complex object with nested undefineds", () => {
-    const stringifiedObject = PartyworksStringify(
-      //deep clone the object
-      structuredClone(testObjectComplex)
-    );
+    const clone = structuredClone(testObjectComplex);
+    const stringifiedObject = PartyworksStringify(testObjectComplex);
 
     const parsedObject = PartyworksParse(stringifiedObject);
 
+    //make sure original object remains unchanged
+    expect(clone).toEqual(testObjectComplex);
     //this makes sure undefined keys are kept
     expect(parsedObject).toStrictEqual(testObjectComplex);
   });
