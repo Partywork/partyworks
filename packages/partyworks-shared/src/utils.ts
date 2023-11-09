@@ -85,38 +85,22 @@ export const PartyworksStringify = (
 
 //partial merge util for presence
 export const mergerPartial = <T>(rootObj: T, partialObj: Partial<T>): T => {
-  const mergedObject = { ...rootObj };
+  const mergedObject: T = { ...rootObj };
 
-  const mergeDeep = <T>(target: T, source: Partial<T>): T => {
+  const mergeDeep = (target: any, source: any) => {
     for (const key in source) {
       if (Object.prototype.hasOwnProperty.call(source, key)) {
-        const rootValue = target[key as keyof T];
-        const partialValue = source[key];
-
-        if (
-          rootValue &&
-          partialValue &&
-          typeof rootValue === "object" &&
-          typeof partialValue === "object" &&
-          !Array.isArray(rootValue)
-        ) {
-          target[key as keyof T] = mergeDeep(
-            rootValue,
-            partialValue as Partial<typeof rootValue>
-          );
-        } else if (Array.isArray(rootValue) && Array.isArray(partialValue)) {
-          target[key as keyof T] = partialValue as any as T[Extract<
-            keyof T,
-            string
-          >];
+        if (source[key] instanceof Object && !Array.isArray(source[key])) {
+          target[key] = mergeDeep({ ...(target[key] || {}) }, source[key]);
+        } else if (Array.isArray(source[key])) {
+          target[key] = [...(source[key] || [])];
         } else {
-          target[key as keyof T] = partialValue as T[Extract<keyof T, string>];
+          target[key] = source[key];
         }
       }
     }
     return target;
   };
 
-  mergeDeep(mergedObject, partialObj);
-  return mergedObject as T;
+  return mergeDeep(mergedObject, partialObj);
 };
