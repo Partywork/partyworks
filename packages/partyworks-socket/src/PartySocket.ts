@@ -498,13 +498,15 @@ export class PartySocket {
       conn.addEventListener("close", cleanupReject);
       conn.addEventListener("error", cleanupReject);
 
+      //Note :- setup the regular listeners before the connectionResolver
+      //so that when connection resolver resolves, we're sure that event is consumed by our other listeners already
+      this.addSocketEventListeners(conn);
+
       if (
         this.options.waitForRoom &&
         typeof this.options.connectionResolver === "function"
       )
         conn.addEventListener("message", connectionResolver);
-
-      this.addSocketEventListeners(conn);
     });
 
     try {
