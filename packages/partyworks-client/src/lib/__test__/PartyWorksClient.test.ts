@@ -1,76 +1,28 @@
-import { PartyworksEvents, PartyworksParse } from "partyworks-shared";
-import WebSocket, { WebSocketServer } from "ws";
+import { PartyworksEvents } from "partyworks-shared";
 import { createClient } from "../../client";
+import { PORT, fakeServer } from "./_setup";
 
-//!note this is a temporary setup, proper testing will be added soon
-
-class MockWindow {
-  _listeners: { [event: string]: (() => void)[] } = {};
-
-  addEventListener(event: "focus" | "offline", handler: () => void) {
-    if (!this._listeners[event]) {
-      this._listeners[event] = [];
-    }
-    this._listeners[event].push(handler);
-  }
-
-  notify(event: "focus" | "offline") {
-    const listeners = this._listeners[event];
-    if (listeners) {
-      listeners.forEach((handler) => {
-        handler();
-      });
-    }
-  }
-
-  //dummy
-  removeEventListener(event: "focus" | "offline", handler: () => void) {}
-}
+const SOCKET_URL = `localhost:${PORT}`;
 
 describe("test throttling & batching", () => {
   it("should throttle the messages", (done) => {
-    //window & WebSocket is needed for partyworks-client
-    (global as any).WebSocket = WebSocket;
-    (global as any).window = new MockWindow();
-    const PORT = 9001; //https://www.youtube.com/watch?v=SiMHTK15Pik
-
-    const socketServer = new WebSocketServer({ port: PORT });
-
     //number of events that we recieved on server /or num of events sent by the client one & the same thing
     let eventsRecivedCount = 0;
-    socketServer.on("connection", (con) => {
-      //fake room_state connect message
-      con.send(
-        JSON.stringify({
-          event: PartyworksEvents.ROOM_STATE,
-          data: {
-            self: {
-              data: {
-                id: "hi",
-              },
-            },
-            users: [],
-          },
-          _pwf: "-1",
-        })
-      );
-      con.addEventListener("message", (message) => {
-        const parsedEvent = PartyworksParse(message.data as string);
 
-        expect(parsedEvent._pwf).toBe("-1");
-        expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
-        expect(parsedEvent.data.length).toBe(1);
-        expect(parsedEvent.data[0].event).toBe(
-          PartyworksEvents.PRESENSE_UPDATE
-        );
+    //fake websocket server setup to listen for the messages
+    fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      expect(parsedEvent._pwf).toBe("-1");
+      expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
+      expect(parsedEvent.data.length).toBe(1);
+      expect(parsedEvent.data[0].event).toBe(PartyworksEvents.PRESENSE_UPDATE);
 
-        eventsRecivedCount++;
-      });
+      console.log(parsedEvent.data[0].data);
+      eventsRecivedCount++;
     });
 
     //SHOULD THROTTLE TO ONE MESSAGE PER SECOND
     const client = createClient({
-      host: `localhost:${PORT}`,
+      host: SOCKET_URL,
       throttle: 1000, //throttle per 1 second
       //   logLevel: 0,
     });
@@ -100,9 +52,7 @@ describe("test throttling & batching", () => {
             expect(eventsRecivedCount).toBe(5);
 
             room.disConnect();
-            socketServer.close(() => {
-              setTimeout(done, 100);
-            });
+            done();
 
             return;
           }
@@ -114,13 +64,199 @@ describe("test throttling & batching", () => {
       }
     });
 
-    //LONG RUNNING TEST CAN TAKE UPTO 10 SEC
-  }, 20000);
+    //LONG RUNNING TEST WILL TAKE UPTO 5+ SEC
+  }, 10000);
 
-  //TODO
-  it.todo("should not send message when not connected");
-  it.todo("should send buffered message on reconnection");
-  it.todo("should batch messages");
-  it.todo("should not batch messages by default");
-  it.todo("should work after reconnection");
+  it("[current] should queue & send buffered message on reconnection", (done) => {
+    //fake websocket server setup to listen for the messages
+    fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      expect(parsedEvent._pwf).toBe("-1");
+      expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
+      expect(parsedEvent.data.length).toBe(8);
+      expect(parsedEvent.data[0].event).toBe(PartyworksEvents.PRESENSE_UPDATE);
+
+      expect(parsedEvent.data[0].data.data.cursor).toStrictEqual({
+        x: 2,
+        y: 1,
+      });
+
+      expect(
+        [
+          ...parsedEvent.data.filter(
+            (event: any) => event.event === PartyworksEvents.BROADCAST
+          ),
+        ].length
+      ).toBe(4);
+
+      expect(
+        [
+          ...parsedEvent.data.filter(
+            (event: any) => event.event === "current-anime"
+          ),
+        ].length
+      ).toBe(3);
+
+      room.disConnect();
+      done();
+    });
+
+    //SHOULD THROTTLE TO ONE MESSAGE PER SECOND
+    const client = createClient({
+      host: SOCKET_URL,
+      throttle: 1000, //throttle per 1 second
+      shouldQueueBroadcastIfNotReady: true,
+      shouldQueueEventsIfNotReady: true,
+      // logLevel: 0,
+    });
+
+    //enter the room
+    const room = client.enter("partyworks");
+
+    let didDisconnect = false;
+
+    //todo for now we have to subscribe to this guy here, we need to make sure that presence is available even without self, maybe as a initialstate measure
+    room.subscribe("self", (_self) => {
+      if (!didDisconnect) {
+        //close the connection
+        didDisconnect = true;
+        room.disConnect();
+
+        //update the presence multiple times
+        //and ensure send ihe message sar esent upon reconnection
+        room.updatePresence({ cursor: { x: 1, y: 1 } });
+        room.updatePresence({ cursor: { x: 2 } });
+        room.broadcast({ webtoon: "lookism [go read]" });
+        room.broadcast({ webtoon: "eleceed [go read]" });
+        room.broadcast({ webtoon: "manager kim [go read]" });
+        room.broadcast({ webtoon: "lone necromancer [go watch]" });
+        room.emit("current-anime", { data: "urusei yatsura" });
+        room.emit("current-anime", { data: "doctor stone season 3 part 2" });
+        room.emit("current-anime", { data: "kage no jitsuryokusha season 2" });
+        room.connect();
+      }
+    });
+  });
+
+  //only presence is saved by default, even if the connection is in not connected state
+  it("[current] should not queue & buffer by default", (done) => {
+    //fake websocket server setup to listen for the messages
+    fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      expect(parsedEvent._pwf).toBe("-1");
+      expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
+      expect(parsedEvent.data.length).toBe(1);
+      expect(parsedEvent.data[0].event).toBe(PartyworksEvents.PRESENSE_UPDATE);
+
+      room.disConnect();
+      done();
+    });
+
+    //SHOULD THROTTLE TO ONE MESSAGE PER SECOND
+    const client = createClient({
+      host: SOCKET_URL,
+      throttle: 1000, //throttle per 1 second
+      // logLevel: 0,
+    });
+
+    //enter the room
+    const room = client.enter("partyworks");
+
+    let didDisconnect = false;
+
+    //todo for now we have to subscribe to this guy here, we need to make sure that presence is available even without self, maybe as a initialstate measure
+    room.subscribe("self", (self) => {
+      if (!didDisconnect) {
+        //close the connection
+        didDisconnect = true;
+        room.disConnect();
+
+        //update the presence multiple times
+        //and ensure send ihe message sar esent upon reconnection
+        room.updatePresence({ cursor: { x: 1, y: 1 } });
+        room.updatePresence({ cursor: { x: 2 } });
+        room.broadcast({ webtoon: "lookism [go read]" });
+        room.broadcast({ webtoon: "eleceed [go read]" });
+        room.broadcast({ webtoon: "manager kim [go read]" });
+        room.broadcast({ webtoon: "lone necromancer [go watch]" });
+        room.emit("current-anime", { data: "urusei yatsura" });
+        room.emit("current-anime", { data: "doctor stone season 3 part 2" });
+        room.emit("current-anime", { data: "kage no jitsuryokusha season 2" });
+
+        room.connect();
+      }
+    });
+  });
+
+  it("[current] should respect OfflineOptions room.broadcast room.emit", (done) => {
+    //fake websocket server setup to listen for the messages
+    fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      expect(parsedEvent._pwf).toBe("-1");
+      expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
+      expect(parsedEvent.data.length).toBe(4);
+      expect(parsedEvent.data[0].event).toBe(PartyworksEvents.PRESENSE_UPDATE);
+
+      expect(
+        [
+          ...parsedEvent.data.filter(
+            (event: any) => event.event === PartyworksEvents.BROADCAST
+          ),
+        ].length
+      ).toBe(2);
+
+      expect(
+        [
+          ...parsedEvent.data.filter(
+            (event: any) => event.event === "current-anime"
+          ),
+        ].length
+      ).toBe(1);
+
+      room.disConnect();
+      done();
+    });
+
+    //SHOULD THROTTLE TO ONE MESSAGE PER SECOND
+    const client = createClient({
+      host: SOCKET_URL,
+      throttle: 1000, //throttle per 1 second
+      // logLevel: 0,
+    });
+
+    //enter the room
+    const room = client.enter("partyworks");
+
+    let didDisconnect = false;
+
+    //todo for now we have to subscribe to this guy here, we need to make sure that presence is available even without self, maybe as a initialstate measure
+    room.subscribe("self", (self) => {
+      if (!didDisconnect) {
+        //close the connection
+        didDisconnect = true;
+        room.disConnect();
+
+        //update the presence multiple times
+        //and ensure send ihe message sar esent upon reconnection
+        room.updatePresence({ cursor: { x: 1, y: 1 } });
+        room.broadcast(
+          { webtoon: "lookism [go read]" },
+          { shouldQueueIfNotReady: true }
+        );
+        room.broadcast(
+          { webtoon: "eleceed [go read]" },
+          { shouldQueueIfNotReady: true }
+        );
+        room.broadcast({ webtoon: "manager kim [go read]" });
+        room.broadcast({ webtoon: "lone necromancer [go watch]" });
+
+        room.emit("current-anime", { data: "urusei yatsura" });
+        room.emit(
+          "current-anime",
+          { data: "doctor stone season 3 part 2" },
+          { shouldQueueIfNotReady: true }
+        );
+        room.emit("current-anime", { data: "kage no jitsuryokusha season 2" });
+
+        room.connect();
+      }
+    });
+  });
 });
