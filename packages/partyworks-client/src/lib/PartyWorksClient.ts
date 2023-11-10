@@ -123,11 +123,17 @@ export interface RoomBroadcastEventListener<
   userId: string;
 }
 
+export type OfflineOptions = {
+  shouldQueueIfNotReady?: boolean;
+};
+
 export type LostConnectionStatus = "lost" | "failed" | "restored";
 
 export interface PartyWorksRoomOptions extends PartySocketOptions {
   lostConnectionTimeout?: number;
   throttle?: number;
+  shouldQueueBroadcastIfNotReady?: boolean; //default false
+  shouldQueueEventsIfNotReady?: boolean; //default false
 }
 
 export class PartyWorksRoom<
@@ -140,6 +146,11 @@ export class PartyWorksRoom<
   private _id: string;
   private _partySocket: PartySocket;
   private _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
+
+  //todo: so either make info & data optional, or presence optional
+  //todo: right now presence is optional, but with a default initialPresence we can take care of that
+  //todo: yes let's just do that, that'll eliminate the need for self to be present to updae the presence
+  //todo: later on the suspense hooks can just handle the rest
   private _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
   private _peers: ImmutablePeers<TPresence, TUserMeta>;
   private _lostConnection: {
@@ -506,9 +517,6 @@ export class PartyWorksRoom<
     type: "partial" | "set" = "partial"
   ): void => {
     //todo make sure the self is always there? for presence updates locally.
-    //it can be left in a non ack state, where we don't consider it acked yet
-    //ok anyways revise this
-
     if (this._self) {
       if (type === "partial") {
         this._self.partialSet("presence", data);
@@ -538,12 +546,35 @@ export class PartyWorksRoom<
     }
   };
 
-  broadcast = (data: TBroadcastEvent) => {
+  broadcast = (
+    data: TBroadcastEvent,
+    options: OfflineOptions = {
+      shouldQueueIfNotReady: this.options.shouldQueueBroadcastIfNotReady,
+    }
+  ) => {
+    if (
+      this._partySocket.getStatus() !== "connected" &&
+      !options.shouldQueueIfNotReady
+    )
+      return;
+
     this._buffer.broadcasts.push(MessageBuilder.broadcastMessage(data));
     this.tryFlush();
   };
 
-  emit<K extends keyof TEventsEmit>(event: K, data: TEventsEmit[K]): void {
+  emit<K extends keyof TEventsEmit>(
+    event: K,
+    data: TEventsEmit[K],
+    options: OfflineOptions = {
+      shouldQueueIfNotReady: this.options.shouldQueueEventsIfNotReady,
+    }
+  ): void {
+    if (
+      this._partySocket.getStatus() !== "connected" &&
+      !options.shouldQueueIfNotReady
+    )
+      return;
+
     //todo ability to add a custom batcher, ? per message or per flush ?
     this._buffer.messages.push(MessageBuilder.emitMessage(event, data));
     this.tryFlush();
