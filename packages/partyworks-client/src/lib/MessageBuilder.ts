@@ -50,8 +50,11 @@ export class MessageBuilder {
 
   static emitMessage(event: string | number | symbol, data: any): EmitMessage {
     return {
-      event,
-      data,
+      event: PartyworksEvents.EVENT,
+      data: {
+        event,
+        data,
+      },
       _pwf: "-1",
     };
   }
@@ -66,8 +69,11 @@ export class MessageBuilder {
     rid: string;
   }) {
     return {
-      event,
-      data,
+      event: PartyworksEvents.EVENT,
+      data: {
+        event,
+        data,
+      },
       rid,
       _pwf: "-1",
     };
