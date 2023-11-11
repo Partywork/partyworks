@@ -91,7 +91,7 @@ describe("test throttling & batching", () => {
       expect(
         [
           ...parsedEvent.data.filter(
-            (event: any) => event.event === "current-anime"
+            (event: any) => event.event === PartyworksEvents.EVENT
           ),
         ].length
       ).toBe(3);
@@ -138,7 +138,7 @@ describe("test throttling & batching", () => {
   });
 
   //only presence is saved by default, even if the connection is in not connected state
-  it("[current] should not queue & buffer by default", (done) => {
+  it("should not queue & buffer by default", (done) => {
     //fake websocket server setup to listen for the messages
     fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
       expect(parsedEvent._pwf).toBe("-1");
@@ -205,7 +205,7 @@ describe("test throttling & batching", () => {
       expect(
         [
           ...parsedEvent.data.filter(
-            (event: any) => event.event === "current-anime"
+            (event: any) => event.event === PartyworksEvents.EVENT
           ),
         ].length
       ).toBe(1);
