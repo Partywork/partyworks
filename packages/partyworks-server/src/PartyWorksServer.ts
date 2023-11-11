@@ -118,26 +118,25 @@ export abstract class PartyWorks<
           break;
         }
 
-        default: {
-          //now check for internal custom events
-
-          const eventHandler = this._customEvents[parsedData.event];
+        case PartyworksEvents.EVENT: {
+          const { event, data } = parsedData.data;
+          const eventHandler = this._customEvents[event];
 
           if (eventHandler) {
             try {
               const { validator, handler } = eventHandler;
               if (typeof validator === "function") {
                 //? maybe we're expecting it to throw, or return false
-                validator(parsedData.data);
+                validator(data);
               }
 
               //? here also if throws we can handle maybe based on event & rid
               //?ok definitely makes sense to throw an error a default one & perhaps a custom one
               handler(
                 {
-                  data: parsedData.data,
+                  data: data,
                   rid: parsedData.rid,
-                  event: parsedData.event,
+                  event: event,
                 },
                 conn
               );
@@ -152,6 +151,13 @@ export abstract class PartyWorks<
           }
 
           this.notFound(parsedData, conn);
+
+          break;
+        }
+
+        default: {
+          //ideally should never happen
+          console.warn("Unknown messge with _pwf flag", parsedData);
         }
       }
     } catch (error) {}
