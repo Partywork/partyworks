@@ -129,7 +129,9 @@ export type OfflineOptions = {
 
 export type LostConnectionStatus = "lost" | "failed" | "restored";
 
-export interface PartyWorksRoomOptions extends PartySocketOptions {
+export interface PartyWorksRoomOptions<TPresence = any>
+  extends PartySocketOptions {
+  initialPresence: TPresence;
   lostConnectionTimeout?: number;
   throttle?: number;
   shouldQueueBroadcastIfNotReady?: boolean; //default false
@@ -146,12 +148,10 @@ export class PartyWorksRoom<
   private _id: string;
   private _partySocket: PartySocket;
   private _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
-
-  //todo: so either make info & data optional, or presence optional
-  //todo: right now presence is optional, but with a default initialPresence we can take care of that
-  //todo: yes let's just do that, that'll eliminate the need for self to be present to updae the presence
-  //todo: later on the suspense hooks can just handle the rest
-  private _self?: ImmutableObject<Self<TPresence, TUserMeta>>; //not sure how to structure this one?
+  private _self: ImmutableObject<
+    Self<TPresence, TUserMeta>,
+    Required<Self<TPresence, TUserMeta>>
+  >; //not sure how to structure this one?
   private _peers: ImmutablePeers<TPresence, TUserMeta>;
   private _lostConnection: {
     lostConnectionTimeout?: ReturnType<typeof setTimeout>; //timeout for when a connection is lost
@@ -192,7 +192,7 @@ export class PartyWorksRoom<
     lostConnection: SingleEventSource<LostConnectionStatus>;
   };
 
-  constructor(private options: PartyWorksRoomOptions) {
+  constructor(private options: PartyWorksRoomOptions<TPresence>) {
     super();
 
     this._id = options.room;
@@ -200,9 +200,29 @@ export class PartyWorksRoom<
       this.options.lostConnectionTimeout ?? DEFAULT_LOSTCONNECTION_TIMEOUT;
     this.options.throttle = this.options.throttle ?? DEFAULT_THROTTLE_DELAY;
 
+    this._buffer.presence = MessageBuilder.updatePresenceMessage({
+      type: "set",
+      data: this.options.initialPresence,
+    });
+
     //we will start closed
     this._partySocket = new PartySocket({
       ...options,
+
+      //todo: so not sure, if we want the users to overrride this?
+      connectionResolver(message, resolver, _rejecter) {
+        try {
+          const parsedEvent = PartyworksParse(message.data);
+
+          //mark as connected only on room_state message
+          if (
+            parsedEvent._pwf === "-1" &&
+            parsedEvent.event === PartyworksEvents.ROOM_STATE
+          ) {
+            resolver();
+          }
+        } catch (error) {}
+      },
     });
 
     this._partySocket.eventHub.status.subscribe(this.handleLostConnection);
@@ -223,6 +243,20 @@ export class PartyWorksRoom<
     };
     this._message();
     this._peers = new ImmutablePeers();
+    this._self = new ImmutableObject<Self, Required<Self>>(
+      {
+        presence: this.options.initialPresence,
+      } as Self,
+      (self) => {
+        //note: we're not checking for info, as in some cases users may not use info [UserMeta] at all
+        //in some cased it may be explicitly null or undefined, and self.data is more than good enough to confirm ROOM_STATE message
+        if (typeof self.data === "undefined") {
+          return null;
+        }
+
+        return self as Required<Self>;
+      }
+    );
   }
 
   private _message() {
@@ -263,24 +297,26 @@ export class PartyWorksRoom<
             //but for ease and simplicity that'll be the same message now
             case PartyworksEvents.ROOM_STATE: {
               this._loaded = true;
-              this._self = new ImmutableObject<Self>({
+
+              this._self.set({
                 data: {
                   id: this._partySocket.id,
                   // _pkUrl: this._partySocket._pkurl,
                 },
                 info: data.data.self.info, //this is provided by the user on backend
-                presence: undefined,
+                presence: this._self.get("presence"),
               });
 
               const usersWithoutSelf = data.data.users.filter(
-                (user) => user.userId !== this._self?.current.data.id
+                (user) => user.userId !== this._self.current!.data.id
               );
               this._peers.addPeers(usersWithoutSelf);
               this.eventHub.others.notify({
                 others: this._peers.current,
                 event: { type: "set" },
               });
-              this.eventHub.self.notify(this._self.current);
+              this.eventHub.self.notify(this._self.current!);
+
               break;
             }
 
@@ -308,10 +344,10 @@ export class PartyWorksRoom<
             }
 
             case PartyworksEvents.PRESENSE_UPDATE: {
-              if (data.data.userId === this._self?.current.data.id) {
+              if (data.data.userId === this._self.current?.data.id) {
                 this._self.partialSet("presence", data.data.data);
                 this.eventHub.self.notify(this._self.current);
-                this.eventHub.myPresence.notify(this._self?.current.presence!);
+                this.eventHub.myPresence.notify(this._self.current.presence);
 
                 return;
               }
@@ -319,6 +355,7 @@ export class PartyWorksRoom<
               const peer = this._peers.updatePeer(data.data.userId, {
                 presence: data.data.data,
               });
+
               if (peer)
                 this.eventHub.others.notify({
                   others: this._peers.current,
@@ -328,11 +365,12 @@ export class PartyWorksRoom<
                     other: peer,
                   },
                 });
+
               break;
             }
 
             case PartyworksEvents.USERMETA_UPDATE: {
-              if (data.data.userId === this._self?.current.data.id) {
+              if (data.data.userId === this._self.current?.data!.id) {
                 this._self.partialSet("info", data.data.data);
                 this.eventHub.self.notify(this._self.current);
                 return;
@@ -516,34 +554,34 @@ export class PartyWorksRoom<
     data: TPresence | Partial<TPresence>,
     type: "partial" | "set" = "partial"
   ): void => {
-    //todo make sure the self is always there? for presence updates locally.
-    if (this._self) {
-      if (type === "partial") {
-        this._self.partialSet("presence", data);
-      } else {
-        this._self.set({ presence: data as TPresence });
-      }
-      this.eventHub.myPresence.notify(this._self.current.presence!);
-      this.eventHub.self.notify(this._self.current!);
-
-      if (!this._buffer.presence) {
-        this._buffer.presence = MessageBuilder.updatePresenceMessage({
-          data,
-          type,
-        });
-      } else {
-        //if presence is already present,
-        this._buffer.presence = MessageBuilder.updatePresenceMessage({
-          data: mergerPartial(
-            { ...this._buffer.presence.data.data },
-            data as any
-          ),
-          type,
-        });
-      }
-
-      this.tryFlush();
+    if (type === "partial") {
+      this._self.partialSet("presence", data);
+    } else {
+      this._self.set({ presence: data as TPresence });
     }
+
+    this.eventHub.myPresence.notify(this._self.get("presence"));
+
+    //notify only when self is present
+    this._self.current && this.eventHub.self.notify(this._self.current);
+
+    if (!this._buffer.presence) {
+      this._buffer.presence = MessageBuilder.updatePresenceMessage({
+        data,
+        type,
+      });
+    } else {
+      //if presence is already present,
+      this._buffer.presence = MessageBuilder.updatePresenceMessage({
+        data: mergerPartial(
+          { ...this._buffer.presence.data.data },
+          data as any
+        ),
+        type,
+      });
+    }
+
+    this.tryFlush();
   };
 
   broadcast = (
@@ -676,12 +714,16 @@ export class PartyWorksRoom<
     }
   };
 
+  getSelf = () => {
+    return this._self.current;
+  };
+
   getOthers = (): Peer<TPresence, TUserMeta>[] => {
     return this._peers.current;
   };
 
   getPresence = (): TPresence | undefined => {
-    return this._self?.current.presence;
+    return this._self.get("presence");
   };
 
   getStatus = () => {
@@ -748,8 +790,4 @@ export class PartyWorksRoom<
   leave() {
     this._partySocket.stop();
   }
-
-  getSelf = () => {
-    return this._self?.current;
-  };
 }

@@ -2,7 +2,7 @@ export const DEFAULT_LOSTCONNECTION_TIMEOUT = 5000; //5sec
 export const DEFAULT_THROTTLE_DELAY = 16; //16 milisec
 
 export interface BaseUser {
-  data: {
+  data?: {
     id: string; //internal partykit id or something
     // _pkUrl: string;
   };
@@ -17,6 +17,6 @@ export type Peer<TPresence = any, TUserMeta = any> = {
 
 //todo self can have other data maybe,
 export interface Self<TPresence = any, TUserMeta = any> extends BaseUser {
-  info: TUserMeta;
-  presence?: TPresence;
+  info?: TUserMeta;
+  presence: TPresence;
 }

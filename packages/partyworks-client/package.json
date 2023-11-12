@@ -24,7 +24,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "pub": "npm version patch  && npm run build &&  npm publish",
-    "test:watch": "jest --watchAll --no-cache --detectOpenHandles"
+    "test:watch": "jest --watchAll --no-cache --detectOpenHandles",
+    "test:current": "jest --watchAll --no-cache --detectOpenHandles  --testNamePattern=current"
   },
   "keywords": [
     "partyworks",

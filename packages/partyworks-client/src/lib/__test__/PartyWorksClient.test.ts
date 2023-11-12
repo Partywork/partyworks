@@ -1,22 +1,69 @@
 import { PartyworksEvents } from "partyworks-shared";
 import { createClient } from "../../client";
 import { PORT, fakeServer } from "./_setup";
+import { MessageBuilder } from "../MessageBuilder";
 
 const SOCKET_URL = `localhost:${PORT}`;
 
-describe("test throttling & batching", () => {
-  it("should throttle the messages", (done) => {
-    //number of events that we recieved on server /or num of events sent by the client one & the same thing
-    let eventsRecivedCount = 0;
+//todo: maybe have it so the initialPresence bypasses on connect, and doesn;t count towards the throttling & buffer ?? maybe just maybe
+//todo .... like we can have an optional other param like bypass to the tryFlush method
+
+const expectInitalPresenceMessage = (
+  parsedEvent: any,
+  initialPresence: any
+) => {
+  expect(parsedEvent._pwf).toBe("-1");
+  expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
+  expect(parsedEvent.data.length).toBe(1);
+  expect(parsedEvent.data[0]).toEqual(
+    MessageBuilder.updatePresenceMessage({ type: "set", data: initialPresence })
+  );
+};
+
+describe("test presence", () => {
+  it("should use & send the initialPresence", (done) => {
+    const initialPresence = { bestSeries: "Tenali Rama" };
 
     //fake websocket server setup to listen for the messages
     fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      expectInitalPresenceMessage(parsedEvent, initialPresence);
+
+      client.leave("partyworks");
+      done();
+    });
+
+    const client = createClient({
+      host: SOCKET_URL,
+    });
+
+    //make sure locally using the initalPresence
+    expect(
+      client.enter("partyworks", { initialPresence }).getPresence()
+    ).toEqual(initialPresence);
+  });
+});
+
+describe("test throttling & batching", () => {
+  it(" should throttle the messages", (done) => {
+    //number of events that we recieved on server /or num of events sent by the client one & the same thing
+    let eventsRecivedCount = 0;
+
+    let gotInitalMessage = false;
+
+    //fake websocket server setup to listen for the messages
+    fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      if (!gotInitalMessage) {
+        expectInitalPresenceMessage(parsedEvent, {});
+        gotInitalMessage = true;
+
+        return;
+      }
+
       expect(parsedEvent._pwf).toBe("-1");
       expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
       expect(parsedEvent.data.length).toBe(1);
       expect(parsedEvent.data[0].event).toBe(PartyworksEvents.PRESENSE_UPDATE);
 
-      console.log(parsedEvent.data[0].data);
       eventsRecivedCount++;
     });
 
@@ -27,7 +74,9 @@ describe("test throttling & batching", () => {
       //   logLevel: 0,
     });
 
-    const room = client.enter("partyworks");
+    const room = client.enter("partyworks", {
+      initialPresence: {},
+    });
 
     let connectedCount = 0;
 
@@ -67,9 +116,18 @@ describe("test throttling & batching", () => {
     //LONG RUNNING TEST WILL TAKE UPTO 5+ SEC
   }, 10000);
 
-  it("[current] should queue & send buffered message on reconnection", (done) => {
+  it("should queue & send buffered message on reconnection", (done) => {
+    let gotInitalMessage = false;
+
     //fake websocket server setup to listen for the messages
     fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      if (!gotInitalMessage) {
+        expectInitalPresenceMessage(parsedEvent, {});
+        gotInitalMessage = true;
+
+        return;
+      }
+
       expect(parsedEvent._pwf).toBe("-1");
       expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
       expect(parsedEvent.data.length).toBe(8);
@@ -110,13 +168,12 @@ describe("test throttling & batching", () => {
     });
 
     //enter the room
-    const room = client.enter("partyworks");
+    const room = client.enter("partyworks", { initialPresence: {} });
 
     let didDisconnect = false;
 
-    //todo for now we have to subscribe to this guy here, we need to make sure that presence is available even without self, maybe as a initialstate measure
-    room.subscribe("self", (_self) => {
-      if (!didDisconnect) {
+    room.subscribe("status", (status) => {
+      if (status === "connected" && !didDisconnect) {
         //close the connection
         didDisconnect = true;
         room.disConnect();
@@ -138,9 +195,18 @@ describe("test throttling & batching", () => {
   });
 
   //only presence is saved by default, even if the connection is in not connected state
-  it("should not queue & buffer by default", (done) => {
+  it(" should not queue & buffer by default", (done) => {
+    let gotInitalMessage = false;
+
     //fake websocket server setup to listen for the messages
     fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      if (!gotInitalMessage) {
+        expectInitalPresenceMessage(parsedEvent, {});
+        gotInitalMessage = true;
+
+        return;
+      }
+
       expect(parsedEvent._pwf).toBe("-1");
       expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
       expect(parsedEvent.data.length).toBe(1);
@@ -158,13 +224,12 @@ describe("test throttling & batching", () => {
     });
 
     //enter the room
-    const room = client.enter("partyworks");
+    const room = client.enter("partyworks", { initialPresence: {} });
 
     let didDisconnect = false;
 
-    //todo for now we have to subscribe to this guy here, we need to make sure that presence is available even without self, maybe as a initialstate measure
-    room.subscribe("self", (self) => {
-      if (!didDisconnect) {
+    room.subscribe("status", (status) => {
+      if (!didDisconnect && status === "connected") {
         //close the connection
         didDisconnect = true;
         room.disConnect();
@@ -186,9 +251,18 @@ describe("test throttling & batching", () => {
     });
   });
 
-  it("[current] should respect OfflineOptions room.broadcast room.emit", (done) => {
+  it("should respect OfflineOptions room.broadcast room.emit", (done) => {
+    let gotInitalMessage = false;
+
     //fake websocket server setup to listen for the messages
     fakeServer.setOnMessageCallback((_socket, parsedEvent) => {
+      if (!gotInitalMessage) {
+        expectInitalPresenceMessage(parsedEvent, {});
+        gotInitalMessage = true;
+
+        return;
+      }
+
       expect(parsedEvent._pwf).toBe("-1");
       expect(parsedEvent.event).toBe(PartyworksEvents.BATCH);
       expect(parsedEvent.data.length).toBe(4);
@@ -222,12 +296,11 @@ describe("test throttling & batching", () => {
     });
 
     //enter the room
-    const room = client.enter("partyworks");
+    const room = client.enter("partyworks", { initialPresence: {} });
 
     let didDisconnect = false;
 
-    //todo for now we have to subscribe to this guy here, we need to make sure that presence is available even without self, maybe as a initialstate measure
-    room.subscribe("self", (self) => {
+    room.subscribe("status", (status) => {
       if (!didDisconnect) {
         //close the connection
         didDisconnect = true;

@@ -1,10 +1,15 @@
 import { mergerPartial } from "partyworks-shared";
 
-export class ImmutableObject<T extends object> {
-  private cachedObject: T | undefined;
-  private data: T;
+//todo, umm... maybe reafactor it a little, with the customCurrent stuff
 
-  constructor(data: T) {
+export class ImmutableObject<TBaseObj extends object, TTransformObj = any> {
+  private cachedObject: TBaseObj | undefined;
+  private data: TBaseObj;
+
+  constructor(
+    data: TBaseObj,
+    private customCurrent: (data: Readonly<TBaseObj>) => TTransformObj | null
+  ) {
     this.data = Object.freeze(data);
   }
 
@@ -12,33 +17,37 @@ export class ImmutableObject<T extends object> {
     this.cachedObject = undefined;
   }
 
-  private _toImmutable(): T {
+  private _toImmutable(): TBaseObj {
     return this.data;
   }
 
   get current() {
     if (!this.cachedObject) this.cachedObject = this._toImmutable();
 
-    return this.cachedObject;
+    return this.customCurrent(this.cachedObject);
+  }
+
+  get<Key extends keyof TBaseObj>(key: Key): TBaseObj[Key] {
+    return this.data[key];
   }
 
   //sub key level partial updates :/
-  partialSet<K extends keyof T>(key: K, value: Partial<T[K]>) {
+  partialSet<K extends keyof TBaseObj>(key: K, value: Partial<TBaseObj[K]>) {
     // If the key doesn't exist in the object, create it with the provided value.
     if (!(key in this.data)) {
-      const updatedData = { ...this.data, [key]: value } as T;
+      const updatedData = { ...this.data, [key]: value } as TBaseObj;
       this.data = Object.freeze(updatedData);
     } else {
       const updatedData = mergerPartial(this.data, {
         [key]: value,
-      } as any) as T;
+      } as any) as TBaseObj;
 
       this.data = Object.freeze(updatedData);
     }
     this.invalidateCache();
   }
 
-  set(data: Partial<T>) {
+  set(data: Partial<TBaseObj>) {
     this.data = Object.freeze({ ...this.data, ...data });
     this.invalidateCache();
   }

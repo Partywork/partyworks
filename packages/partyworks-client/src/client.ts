@@ -3,7 +3,7 @@ import { PartyWorksRoom, PartyWorksRoomOptions } from "./lib/PartyWorksClient";
 //* THIS IS CLIENT
 //* API [batch & throttle, ENTER, LEAVE, MULTI-ROOM-SUPPORT]
 
-export interface PartyClient {
+export interface PartyWorksClient {
   enter: <
     TPresence = any,
     TUserMeta = any,
@@ -11,7 +11,8 @@ export interface PartyClient {
     TEvents extends Record<string, any> = {},
     TEventsEmitter = any
   >(
-    roomId: string
+    roomId: string,
+    options: PartyworksRoomEnterOptions
   ) => PartyWorksRoom<
     TPresence,
     TUserMeta,
@@ -22,14 +23,24 @@ export interface PartyClient {
   leave: (roomId: string) => void;
 }
 
-export type PartyworksClientOptions = Omit<PartyWorksRoomOptions, "room">;
+export type PartyworksClientOptions = Omit<
+  PartyWorksRoomOptions,
+  "room" | "initialPresence"
+>;
+
+export type PartyworksRoomEnterOptions = Pick<
+  PartyWorksRoomOptions,
+  "initialPresence"
+>;
 
 //but here also we need to provide a way to manuaaly connect
-export const createClient = (options: PartyworksClientOptions): PartyClient => {
+export const createClient = (
+  createClientOptions: PartyworksClientOptions
+): PartyWorksClient => {
   //i guess this is for future multirom support
   const rooms = new Map<string, PartyWorksRoom<any>>();
 
-  function enter(roomId: string) {
+  function enter(roomId: string, options: PartyworksRoomEnterOptions) {
     const existingRoom = rooms.get(roomId);
 
     if (existingRoom) {
@@ -37,8 +48,9 @@ export const createClient = (options: PartyworksClientOptions): PartyClient => {
     }
 
     const room = new PartyWorksRoom({
-      ...options,
       room: roomId,
+      ...createClientOptions,
+      ...options,
     });
     rooms.set(roomId, room);
 
