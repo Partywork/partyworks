@@ -212,19 +212,18 @@ export function createRoomContext<
   }
 
   function useMyPresence(): [
-    TPresence | undefined,
+    TPresence,
     PartyWorksRoom<TPresence>["updatePresence"]
   ] {
     const room = useRoom();
 
     const subscribeFn = room.eventHub.myPresence.subscribe;
     const getSnapshot = room.getPresence;
-    const getServerSnapshot = useCallback(() => undefined, []);
 
     const presence = useSyncExternalStore(
       subscribeFn,
       getSnapshot,
-      getServerSnapshot
+      getSnapshot
     );
     const updatePresence = room.updatePresence;
 
