@@ -52,7 +52,7 @@ export function createRoomContext<
   //returna room provider context
   // const RoomProvider
 
-  function RoomProvider(props: RoomProviderProps) {
+  function RoomProvider(props: RoomProviderProps<TPresence>) {
     const { children, roomId, initialPresence } = props;
 
     if (!roomId) throw new Error("roomId is required");
