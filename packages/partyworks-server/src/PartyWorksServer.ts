@@ -201,7 +201,7 @@ export abstract class PartyWorks<
     this.customDataOnConnect(connection, ctx);
     connection.addEventListener("message", (e) => {
       if (e.data === "PING") {
-        conneciton.send("PONG");
+        connection.send("PONG");
         return;
       }
       this.parseAndRouteMessage(e, connection);
