@@ -1,6 +1,6 @@
 {
   "name": "partyworks-client",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -41,8 +41,8 @@
     "ws": "^8.14.2"
   },
   "dependencies": {
-    "partyworks-shared": "^0.0.0",
-    "partyworks-socket": "^0.0.1",
+    "partyworks-shared": "0.0.1",
+    "partyworks-socket": "0.0.2",
     "uuid": "^9.0.1"
   }
 }
