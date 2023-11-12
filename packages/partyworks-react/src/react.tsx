@@ -11,7 +11,7 @@ import React, {
 
 import type {
   Peer,
-  PartyClient,
+  PartyWorksClient,
   RoomBroadcastEventListener,
 } from "partyworks-client";
 import { PartyWorksRoom, shallow } from "partyworks-client";
@@ -26,8 +26,9 @@ import { LostConnectionStatus } from "partyworks-client";
 //* [useStatus]
 //* custom events endpoint
 
-interface RoomProviderProps {
+interface RoomProviderProps<TPresence = any> {
   roomId: string;
+  initialPresence: TPresence;
   children: React.ReactNode;
 }
 
@@ -39,7 +40,7 @@ export function createRoomContext<
   TBroadcast = any,
   TEvents extends Record<string, any> = any,
   TEventEmitters extends Record<string, any> = any
->(client: PartyClient) {
+>(client: PartyWorksClient) {
   const RoomContext = createContext<PartyWorksRoom<
     TPresence,
     TUserMeta,
@@ -52,12 +53,14 @@ export function createRoomContext<
   // const RoomProvider
 
   function RoomProvider(props: RoomProviderProps) {
-    const { children, roomId } = props;
+    const { children, roomId, initialPresence } = props;
 
     if (!roomId) throw new Error("roomId is required");
 
     const [room, setRoom] = useState(
-      client.enter(roomId) as PartyWorksRoom<
+      client.enter(roomId, {
+        initialPresence,
+      }) as PartyWorksRoom<
         TPresence,
         TUserMeta,
         TBroadcast,
@@ -67,7 +70,9 @@ export function createRoomContext<
     );
 
     useEffect(() => {
-      const room = client.enter(roomId) as PartyWorksRoom<
+      const room = client.enter(roomId, {
+        initialPresence,
+      }) as PartyWorksRoom<
         TPresence,
         TUserMeta,
         TBroadcast,
