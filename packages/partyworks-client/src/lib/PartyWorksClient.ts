@@ -722,7 +722,7 @@ export class PartyWorksRoom<
     return this._peers.current;
   };
 
-  getPresence = (): TPresence | undefined => {
+  getPresence = (): TPresence => {
     return this._self.get("presence");
   };
 
