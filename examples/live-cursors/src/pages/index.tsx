@@ -8,17 +8,6 @@ import styles from "./index.module.css";
  * This file shows how to add basic live cursors on your product.
  */
 
-const COLORS = [
-  "#E57373",
-  "#9575CD",
-  "#4FC3F7",
-  "#81C784",
-  "#FFF176",
-  "#FF8A65",
-  "#F06292",
-  "#7986CB",
-];
-
 function Example() {
   /**
    * useMyPresence returns the presence of the current user and a function to update it.
@@ -49,12 +38,12 @@ function Example() {
       onPointerLeave={() =>
         // When the pointer goes out, set cursor to null
         updateMyPresence({
-          cursor: null,
+          cursor: undefined,
         })
       }
     >
       <div className={styles.text}>
-        {myPresence?.cursor
+        {myPresence.cursor
           ? `${myPresence.cursor.x} × ${myPresence.cursor.y}`
           : "Move your cursor to broadcast its position to other people in the room."}
       </div>
@@ -63,8 +52,8 @@ function Example() {
         /**
          * Iterate over other users and display a cursor based on their presence
          */
-        others.map(({ userId, presence }) => {
-          if (!presence || presence.cursor === null) {
+        others.map(({ userId, presence, info }) => {
+          if (!presence?.cursor) {
             return null;
           }
 
@@ -75,7 +64,7 @@ function Example() {
               // Assigning a color with a modulo makes sure that a specific user has the same colors on every clients
               //ok our userId is string afaik, and generated a random id if none passed, so this will lead to changing colors,
               //which is fun in it's own way
-              color={COLORS[Math.floor(Math.random() * 9) % COLORS.length]}
+              color={info.color}
               x={presence.cursor.x}
               y={presence.cursor.y}
             />
@@ -90,7 +79,7 @@ export default function Page() {
   const roomId = useOverrideRoomId("nextjs-live-cursors");
 
   return (
-    <RoomProvider roomId={roomId}>
+    <RoomProvider roomId={roomId} initialPresence={{}}>
       <Example />
     </RoomProvider>
   );

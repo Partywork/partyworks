@@ -15,8 +15,8 @@ export default function Cursor({ color, x, y }: Props) {
         top: 0,
         transform: `translateX(${x}px) translateY(${y}px)`,
       }}
-      width="24"
-      height="36"
+      width="54"
+      height="76"
       viewBox="0 0 24 36"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

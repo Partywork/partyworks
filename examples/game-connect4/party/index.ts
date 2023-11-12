@@ -165,14 +165,4 @@ export default class RockPaperScissorsRoom extends PartyWorks<
 
     console.log(error);
   }
-
-  //eventually ping/pong can be handled by partyworks itself
-  onMessage(
-    message: string | ArrayBuffer,
-    sender: Connection<unknown>
-  ): void | Promise<void> {
-    if (message === "PING") {
-      sender.send("PONG");
-    }
-  }
 }

@@ -3,7 +3,7 @@ import { RoomProvider } from "../partyworks.config";
 
 export default function Home() {
   return (
-    <RoomProvider roomId="partyworks">
+    <RoomProvider roomId="partyworks" initialPresence={{}}>
       <GameRoom />
     </RoomProvider>
   );

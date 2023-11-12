@@ -9,7 +9,10 @@ export default function Room() {
   if (!params.has("name")) return <>Name is required</>;
 
   return (
-    <RoomProvider roomId={params.get("roomId")!}>
+    <RoomProvider
+      roomId={params.get("roomId")!}
+      initialPresence={{ isTyping: false }}
+    >
       <ChatBox />
     </RoomProvider>
   );

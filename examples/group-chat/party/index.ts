@@ -159,11 +159,4 @@ export default class GroupChat extends PartyWorks {
       },
     });
   }
-
-  //eventually ping/pong can be handled by partyworks itself
-  onMessage(message: string, sender: Party.Connection<unknown>) {
-    if (message === "PING") {
-      sender.send("PONG");
-    }
-  }
 }

@@ -15,9 +15,9 @@
     "formik": "^2.4.5",
     "next": "14.0.0",
     "partykit": "^0.0.32",
-    "partyworks-client": "^0.0.1",
-    "partyworks-react": "^0.0.1",
-    "partyworks-server": "^0.0.3",
+    "partyworks-client": "0.0.3",
+    "partyworks-react": "0.0.3",
+    "partyworks-server": "0.0.4",
     "react": "^18",
     "react-dom": "^18",
     "react-linkify": "^1.0.0-alpha"

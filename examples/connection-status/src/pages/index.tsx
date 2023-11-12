@@ -5,7 +5,7 @@ import { RoomProvider } from "../partyworks.config";
 export default function Home() {
   return (
     <>
-      <RoomProvider roomId="funrooms">
+      <RoomProvider roomId="funrooms" initialPresence={{}}>
         <div
           style={{
             height: "100dvh",
