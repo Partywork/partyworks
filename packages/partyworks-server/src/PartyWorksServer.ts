@@ -24,10 +24,10 @@ const noop = () => {};
 
 export abstract class PartyWorks<
   TState = any,
+  TPresence = any,
   TEventsListener extends Record<string, any> = {},
   TEventEmitters extends Record<string, any> = {},
-  TBroadcasts extends Record<string, any> = any,
-  TPresence = any
+  TBroadcasts extends Record<string, any> = any
 > implements Party.Server
 {
   private players: Player<TState, TEventEmitters, TPresence>[] = [];
