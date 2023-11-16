@@ -2,13 +2,17 @@ import { mergerPartial } from "partyworks-shared";
 
 //todo, umm... maybe reafactor it a little, with the customCurrent stuff
 
-export class ImmutableObject<TBaseObj extends object, TTransformObj = any> {
+export class ImmutableObject<
+  TBaseObj extends object,
+  TTransformObj = TBaseObj
+> {
   private cachedObject: TBaseObj | undefined;
   private data: TBaseObj;
 
   constructor(
     data: TBaseObj,
-    private customCurrent: (data: Readonly<TBaseObj>) => TTransformObj | null
+    private customCurrent: (data: Readonly<TBaseObj>) => TTransformObj = () =>
+      this.cachedObject as any
   ) {
     this.data = Object.freeze(data);
   }

@@ -150,7 +150,7 @@ export class PartyWorksRoom<
   private _loaded: boolean = false; //we count that we're still connecting if this is not laoded yet
   private _self: ImmutableObject<
     Self<TPresence, TUserMeta>,
-    Required<Self<TPresence, TUserMeta>>
+    Required<Self<TPresence, TUserMeta>> | null
   >; //not sure how to structure this one?
   private _peers: ImmutablePeers<TPresence, TUserMeta>;
   private _lostConnection: {
@@ -243,7 +243,7 @@ export class PartyWorksRoom<
     };
     this._message();
     this._peers = new ImmutablePeers();
-    this._self = new ImmutableObject<Self, Required<Self>>(
+    this._self = new ImmutableObject(
       {
         presence: this.options.initialPresence,
       } as Self,

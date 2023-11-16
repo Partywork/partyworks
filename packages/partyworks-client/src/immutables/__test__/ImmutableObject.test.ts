@@ -2,7 +2,7 @@ import { ImmutableObject } from "../ImmutableObject";
 
 describe("test Immutable Object", () => {
   it("should work", () => {
-    const obj = new ImmutableObject({ test: "data", val: 0 }, (obj) => obj);
+    const obj = new ImmutableObject({ test: "data", val: 0 });
 
     expect(obj.current).toStrictEqual({ test: "data", val: 0 });
   });
@@ -28,10 +28,7 @@ describe("test Immutable Object", () => {
   });
 
   it("partial set", () => {
-    const obj = new ImmutableObject<any>(
-      { test: "data", val: 0 },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({ test: "data", val: 0 });
 
     obj.partialSet("none", undefined!);
 
@@ -43,10 +40,7 @@ describe("test Immutable Object", () => {
   });
 
   it("partial set2", () => {
-    const obj = new ImmutableObject<any>(
-      { test: "data", val: 0 },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({ test: "data", val: 0 });
 
     obj.partialSet("none", undefined!);
 
@@ -61,14 +55,11 @@ describe("test Immutable Object", () => {
   });
 
   it("partial set3", () => {
-    const obj = new ImmutableObject<any>(
-      {
-        test: "data",
-        val: 0,
-        arr: ["p", "a", "r", "t", "y"],
-      },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({
+      test: "data",
+      val: 0,
+      arr: ["p", "a", "r", "t", "y"],
+    });
 
     obj.partialSet("arr", ["w", "o", "r", "k", "s"]);
 
@@ -80,15 +71,12 @@ describe("test Immutable Object", () => {
   });
 
   it("partial set4", () => {
-    const obj = new ImmutableObject<any>(
-      {
-        test: "data",
-        val: 0,
-        arr: ["p", "a", "r", "t", "y"],
-        obj: { val1: "val1", val2: "val2" },
-      },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({
+      test: "data",
+      val: 0,
+      arr: ["p", "a", "r", "t", "y"],
+      obj: { val1: "val1", val2: "val2" },
+    });
 
     obj.partialSet("obj", { val2: "new", val3: "new" });
 
@@ -101,14 +89,11 @@ describe("test Immutable Object", () => {
   });
 
   it("partial set5", () => {
-    const obj = new ImmutableObject<any>(
-      {
-        data: { id: "bdd4adaa-0251-4809-9c0b-9c47b164adab" },
-        info: { color: "#FFF176" },
-        presence: { cursor: undefined },
-      },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({
+      data: { id: "bdd4adaa-0251-4809-9c0b-9c47b164adab" },
+      info: { color: "#FFF176" },
+      presence: { cursor: undefined },
+    });
 
     obj.partialSet("presence", { cursor: { x: 10, y: 10 } });
 
@@ -120,15 +105,12 @@ describe("test Immutable Object", () => {
   });
 
   it("set 1", () => {
-    const obj = new ImmutableObject<any>(
-      {
-        test: "data",
-        val: 0,
-        arr: ["p", "a", "r", "t", "y"],
-        obj: { val1: "val1", val2: "val2" },
-      },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({
+      test: "data",
+      val: 0,
+      arr: ["p", "a", "r", "t", "y"],
+      obj: { val1: "val1", val2: "val2" },
+    });
 
     obj.set({ arr: "bob", obj: { newObj: "hey hey hey" }, newVal: true });
 
@@ -142,15 +124,12 @@ describe("test Immutable Object", () => {
   });
 
   it("set 2", () => {
-    const obj = new ImmutableObject<any>(
-      {
-        test: "data",
-        val: 0,
-        arr: ["p", "a", "r", "t", "y"],
-        obj: { val1: "val1", val2: "val2" },
-      },
-      (obj) => obj
-    );
+    const obj = new ImmutableObject<any>({
+      test: "data",
+      val: 0,
+      arr: ["p", "a", "r", "t", "y"],
+      obj: { val1: "val1", val2: "val2" },
+    });
 
     obj.set({ newVal: true });
 
@@ -164,7 +143,7 @@ describe("test Immutable Object", () => {
   });
 
   it("equality", () => {
-    const obj = new ImmutableObject({ test: "data", val: 0 }, (obj) => obj);
+    const obj = new ImmutableObject({ test: "data", val: 0 });
 
     const ref1 = obj.current;
     const ref2 = obj.current;
