@@ -12,7 +12,7 @@ export interface PartyWorksClient {
     TEventsEmitter = any
   >(
     roomId: string,
-    options: PartyworksRoomEnterOptions
+    options: PartyworksRoomEnterOptions<TPresence>
   ) => PartyWorksRoom<
     TPresence,
     TUserMeta,
@@ -28,8 +28,8 @@ export type PartyworksClientOptions = Omit<
   "room" | "initialPresence"
 >;
 
-export type PartyworksRoomEnterOptions = Pick<
-  PartyWorksRoomOptions,
+export type PartyworksRoomEnterOptions<TPresence = any> = Pick<
+  PartyWorksRoomOptions<TPresence>,
   "initialPresence"
 >;
 
@@ -48,9 +48,9 @@ export const createClient = (
     }
 
     const room = new PartyWorksRoom({
-      room: roomId,
       ...createClientOptions,
       ...options,
+      room: roomId,
     });
     rooms.set(roomId, room);
 
