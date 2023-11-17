@@ -412,6 +412,14 @@ export abstract class PartyWorks<
     return true;
   }
 
+  getBot(id: string) {
+    return this.#bots.find((bot) => bot.id === id);
+  }
+
+  getBots() {
+    return [...this.#bots];
+  }
+
   updateBotPresence(
     id: string,
     presence: Partial<TPresence>,
@@ -441,6 +449,18 @@ export abstract class PartyWorks<
       PartyworksStringify(MessageBuilder.broadcastEvent(bot, data)),
       ignore
     );
+  }
+
+  //it's similar to disconnect
+  removeBot(id: string) {
+    const bot = this.getBot(id);
+
+    if (!bot) return;
+
+    //remove the bot from the list
+    this.#bots = this.#bots.filter((bot) => bot.id !== id);
+
+    this.party.broadcast(PartyworksStringify(MessageBuilder.userOffline(bot)));
   }
 
   //*-----------------------------------

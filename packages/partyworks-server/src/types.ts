@@ -15,6 +15,9 @@ export interface BotOptions {
   onPresenceUpdate(): void | Promise<void>;
   onUserLeft(player: Player): void | Promise<void>;
   onUserJoined(player: Player): void | Promise<void>;
+
+  //todo ? maybe we want the bot to listen to server events as a regular user would
+  // onServerEvent(event: any): any;
 }
 
 export interface Bot<TState = any, TPresence = any> extends BotOptions {
