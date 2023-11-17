@@ -47,7 +47,7 @@ export class MessageBuilder {
     };
   }
 
-  static userOffline(player: Party.Connection) {
+  static userOffline(player: Party.Connection | Bot) {
     return {
       event: PartyworksEvents.USER_LEFT,
       data: {
